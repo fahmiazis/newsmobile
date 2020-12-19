@@ -54,6 +54,7 @@ const style = StyleSheet.create({
         flexDirection: "row",
         width: 80,
         justifyContent: 'flex-end',
+        marginRight: 20
     },
 })
 
@@ -196,39 +197,40 @@ const NewsStack = () => {
     );
 };
 
+const AuthStack = () => {
+    const auth = useSelector(state => state.auth)
+    return (
+        <Stack.Navigator>
+            <Stack.Screen 
+            name='Login' 
+            component={Login} 
+            options={{
+                title: "News.com",
+                headerTitleAlign: "center", 
+                headerTitleStyle: style.textHeader1,
+                headerStyle: style.header,
+                // headerLeft: <HeaderBackButton tintColor={'white'} />
+            }}
+            />
+            <Stack.Screen 
+            name='Register' 
+            component={Register} 
+            options={{
+                title: "News.com",
+                headerTitleAlign: "center", 
+                headerTitleStyle: style.textHeader1,
+                headerStyle: style.header,
+                headerTintColor: 'white'
+            }}
+            />
+        </Stack.Navigator>
+    );
+};
+
 const SettingsStack = () => {
     const auth = useSelector(state => state.auth)
     return (
-        <NavigationContainer
-        independent={true}
-        >
-            {auth.isLogin === false ? (
-            <Stack.Navigator>
-                <Stack.Screen 
-                name='Login' 
-                component={Login} 
-                options={{
-                    title: "News.com",
-                    headerTitleAlign: "center", 
-                    headerTitleStyle: style.textHeader1,
-                    headerStyle: style.header,
-                    // headerLeft: <HeaderBackButton tintColor={'white'} />
-                }}
-                />
-                <Stack.Screen 
-                name='Register' 
-                component={Register} 
-                options={{
-                    title: "News.com",
-                    headerTitleAlign: "center", 
-                    headerTitleStyle: style.textHeader1,
-                    headerStyle: style.header,
-                    headerTintColor: 'white'
-                }}
-                />
-            </Stack.Navigator>
-            ): (
-            <Stack.Navigator>
+        <Stack.Navigator>
             <Stack.Screen 
             options={{
                 title: "News.com",
@@ -251,13 +253,12 @@ const SettingsStack = () => {
             name="Profile"
             component={Profile}
             />
-            </Stack.Navigator>
-            ) }
-        </NavigationContainer>
+        </Stack.Navigator>
     );
 };
 
 const TabbedScreen = () => {
+    const auth = useSelector(state => state.auth)
     return (
         <BottomTab.Navigator>
             <BottomTab.Screen 
@@ -307,7 +308,7 @@ const TabbedScreen = () => {
                 ),
             }}
             name="Settings"
-            component={SettingsStack}
+            component={auth.isLogin === false && auth.token === '' ? (AuthStack) : (SettingsStack)}
             />
         </BottomTab.Navigator>
     );

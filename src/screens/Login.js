@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import { Text, View, StyleSheet, ToastAndroid, ScrollView } from 'react-native'
+import { Text, View, StyleSheet, ToastAndroid, ScrollView, TouchableOpacity } from 'react-native'
 import { Button, Input, Item, Form, Left } from 'native-base'
 
 import Icon from 'react-native-vector-icons/FontAwesome5'
@@ -21,11 +21,18 @@ class Login extends Component {
         email: '',
         password: '',
     }
-    login = (values) => {
-        this.props.login(values)
+    login = async (values) => {
         ToastAndroid.show('waiting...', ToastAndroid.LONG);
+        await this.props.login(values)
+    }
+
+    componentDidUpdate(){
         const {isError, isLogin} = this.props.auth
-        if (isError) {
+        if (isLogin) {
+            ToastAndroid.show('Login succesfully', ToastAndroid.LONG);
+            this.props.navigation.navigate('Tabbed')
+        }
+        else if (isError) {
             ToastAndroid.show('wrong email or password', ToastAndroid.LONG);
         }
     }
@@ -72,9 +79,9 @@ class Login extends Component {
                             {errors.password ? (
                                 <Text style={style.txtError}>{errors.password}</Text>
                             ) : null}
-                            <Button block style={style.btn} onPress={handleSubmit}>
+                            <TouchableOpacity style={[style.btn, style.color]} onPress={handleSubmit}>
                                 <Text style={style.textLogin}>LOGIN</Text>
-                            </Button>
+                            </TouchableOpacity>
                         </Form>
                         )}
                     </Formik>
@@ -83,7 +90,7 @@ class Login extends Component {
                     <Button block style={[style.btn, style.btnfb]}><Icon style={style.iconfb} name="facebook" color="rgb(255,255,255)" size={20}/><Text style={style.textfb}>Continue with Facebook</Text></Button>
                     <Button block style={[style.btn, style.btngo]}><Icon style={style.iconfb} name="google-plus-g" color="rgb(0,0,0)" size={20}/><Text style={style.textgo}>Sign in with Google</Text></Button>
                     <Text style={style.or}>Belum punya account</Text>
-                    <Button block style={[style.btn, style.regis]} onPress={() => this.props.navigation.navigate("Register")}><Text style={style.textLogin}>DAFTAR SEKARANG</Text></Button>
+                    <TouchableOpacity style={[style.btn, style.regis, style.color]} onPress={() => this.props.navigation.navigate("Register")}><Text style={style.textLogin}>DAFTAR SEKARANG</Text></TouchableOpacity>
                 </View>
             </View>
             </ScrollView>
@@ -135,9 +142,16 @@ const style = StyleSheet.create({
         marginBottom: 20,
         paddingHorizontal: 5
     },
+    color: {
+        backgroundColor: 'rgb(25,119,243)',
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'center'
+    },
     btn: {
         borderRadius: 10,
-        marginLeft: "3%"
+        marginLeft: "3%",
+        height: 50
     },
     forgot: {
         textAlign: "right",
@@ -152,6 +166,7 @@ const style = StyleSheet.create({
     textLogin: {
         color: "rgb(255,255,255)",
         fontSize: 15,
+        fontWeight: '400'
     },
     btnfb: {
         marginBottom: 20,

@@ -34,6 +34,7 @@ export default (state=searchState, action) => {
             case 'SORT_PENDING': {
                 return {
                     ...state,
+                    sort: {},
                     isLoading: true,
                     alertMsg: 'waiting ....'
                 };

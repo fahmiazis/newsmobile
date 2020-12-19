@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import {View, Text, FlatList, StyleSheet, Button, ScrollView} from 'react-native'
+import {View, Text, FlatList, StyleSheet, Button, ScrollView, TouchableOpacity} from 'react-native'
 
 import {connect} from 'react-redux'
 import article from '../redux/actions/article'
@@ -7,6 +7,13 @@ import news from '../redux/actions/news'
 import RenderArticle from './RenderArticle'
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'
 class Article extends Component {
+
+    componentDidMount(){
+        const {token, isLogin} = this.props.auth
+        if (isLogin && token !== '') {
+            this.props.getMyArticle(this.props.auth.token)
+        }
+    }
 
     goEdit = async (idNews) => {
         const {id} = idNews 
@@ -43,13 +50,9 @@ class Article extends Component {
                             keyExtractor={(item) => item.id.toString()}
                         />
                     </View>
-                    <View style={style.btnArticle}>
-                        <Button
-                        color="black"
-                        style={style.btnadd}
-                        title={article.data.count > 0 ? ("Add Article") : ("Create Article")} 
-                        onPress={() => this.props.navigation.navigate('AddArticle')}/>
-                    </View>
+                    <TouchableOpacity onPress={() => this.props.navigation.navigate('AddArticle')} style={style.btn}>
+                        <Text style={style.textbtn}>Create new article</Text>
+                    </TouchableOpacity>
                 </ScrollView>
                 ) : (
                     <View style={style.par}>
@@ -221,5 +224,19 @@ const style = StyleSheet.create({
     },
     margin: {
         marginHorizontal: 20
-    }
+    },
+    btn: {
+        backgroundColor: 'rgb(0,0,0)',
+        marginHorizontal: "3%",
+        borderRadius: 10,
+        height: 40,
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        marginTop: 20
+    },
+    textbtn: {
+        color: "rgb(255,255,255)",
+        fontSize: 20,
+    },
 })

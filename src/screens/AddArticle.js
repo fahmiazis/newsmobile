@@ -36,13 +36,13 @@ class EditArticle extends Component {
             content: values.content,
             category_id: category_id
         }
-        this.props.addArticle(this.props.auth.token, data)
-        // await this.props.getMyArticle(this.props.auth.token)
+        await this.props.addArticle(this.props.auth.token, data)
         const {post, alertMsg} = this.props.article
-        if (alertMsg === 'add article succesfully') {
-            await this.props.getDetailNews(post.id)
-            this.props.navigation.navigate('EditArticle', {id: post.id})
-        }
+        this.props.navigation.navigate('EditArticle', {id: post.id})
+    }
+
+    componentWillUnmount(){
+        this.props.getMyArticle(this.props.auth.token)
     }
 
     render() {
@@ -227,7 +227,9 @@ class EditArticle extends Component {
                                     <Label style={style.labelRadio}>Entertainment, Art & Culture</Label>
                                 </View>
                             </View>
-                            <Button onPress={handleSubmit} title="SAVE" color="black" />
+                            <TouchableOpacity onPress={handleSubmit} style={style.btn}>
+                                <Text style={style.textbtn}>SAVE</Text>
+                            </TouchableOpacity>
                         </View>
                         )}
                     </Formik>
@@ -327,5 +329,18 @@ const style = StyleSheet.create({
         fontSize: 14,
         lineHeight: 19,
         color: '#46505C',
+    },
+    btn: {
+        backgroundColor: 'rgb(0,0,0)',
+        // marginHorizontal: "3%",
+        borderRadius: 10,
+        height: 40,
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'center'
+    },
+    textbtn: {
+        color: "rgb(255,255,255)",
+        fontSize: 20,
     },
 })

@@ -12,10 +12,9 @@ import auth from '../redux/actions/auth'
 import profile from '../redux/actions/profile'
 
 class Settings extends Component {
+
     componentDidMount(){
         this.props.getProfile(this.props.auth.token)
-        this.props.getBookmark(this.props.auth.token)
-        this.props.getMyArticle(this.props.auth.token)
     }
 
     logout = () => {

@@ -9,15 +9,22 @@ import RenderBookmark from './RenderBookmark'
 
 class BookmarkNull extends Component {
 
+    componentDidMount(){
+        const {token, isLogin} = this.props.auth
+        if (isLogin && token !== '') {
+            this.props.getBookmark(this.props.auth.token)
+        }
+    }
+
     deleteAll = async () => {
         await this.props.deleteBookmark(this.props.auth.token)
-        await this.props.getBookmark(this.props.auth.token)
+        this.props.getBookmark(this.props.auth.token)
     }
 
     deleteItem = async (idNews) => {
         const {id} = idNews
         await this.props.deleteItemBookmark(this.props.auth.token, id)
-        await this.props.getBookmark(this.props.auth.token)
+        this.props.getBookmark(this.props.auth.token)
     }
 
     goDetail = async (idNews) => {

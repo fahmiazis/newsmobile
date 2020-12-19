@@ -47,9 +47,9 @@ class Profile extends Component {
             name: values.name,
             gender: gender
         }
-        console.log(data)
         await this.props.updateProfile(this.props.auth.token, data)
-        await this.props.getProfile(this.props.auth.token)
+        this.props.getProfile(this.props.auth.token)
+        ToastAndroid.show('Edit profile succesfully', ToastAndroid.LONG);
     }
 
     chooseImage = async () => {
@@ -160,7 +160,9 @@ class Profile extends Component {
                             <Label style={style.labelRadio}>Perempuan</Label>
                         </View>
                     </View>
-                <Button onPress={handleSubmit} block style={style.btn}><Text style={style.textbtn}>SAVE</Text></Button>
+                <TouchableOpacity onPress={handleSubmit} style={style.btn}>
+                    <Text style={style.textbtn}>SAVE</Text>
+                </TouchableOpacity>
                 </Form>
             </View>
             )}
@@ -197,7 +199,11 @@ const style = StyleSheet.create({
     btn: {
         backgroundColor: 'black',
         marginLeft: "3%",
-        borderRadius: 10
+        borderRadius: 10,
+        height: 50,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'row'
     },
     textbtn: {
         color: "rgb(255,255,255)",

@@ -4,7 +4,7 @@ import qs from 'qs'
 export default {
     procSearch: (data) => ({
         type: 'SEARCH',
-        payload: http().get(`/news?search=${data}`),
+        payload: http().get(`/news?search=${data}&sort=createdAt`),
     }),
     getSort: (search, sort) => ({
         type: 'SORT',

@@ -23,7 +23,7 @@ class Register extends Component {
         perempuan: false
     }
 
-    register = (values) => {
+    register = async (values) => {
         const {gender} = this.state
         const data = {
             email: values.email,
@@ -32,13 +32,10 @@ class Register extends Component {
             name: values.name,
             gender: gender
         }
-        this.props.register(data)
-        const {isRegister} = this.props.auth
         ToastAndroid.show('waiting...', ToastAndroid.LONG);
-        if (isRegister) {
-            ToastAndroid.show('Register succesfully', ToastAndroid.LONG);
-            this.props.navigation.navigate('Login')
-        }
+        await this.props.register(data)
+        this.props.navigation.navigate('Login')
+        ToastAndroid.show('Register succesfully', ToastAndroid.LONG);
     }
 
     render() {
@@ -128,12 +125,9 @@ class Register extends Component {
                         <Text style={style.txtError}>{errors.password}</Text>
                     ) : null}
                     <Text style={style.textSetuju}>Dengan Menekan tombol "Daftar", saya menyetujui *Kebijakan Privasi dan Syarat dan Persetujuan</Text>
-                    <View style={style.btn}>
-                        <Button
-                        title="Daftar"
-                        onPress={handleSubmit}
-                        />
-                    </View>
+                    <TouchableOpacity style={style.btn} onPress={handleSubmit}>
+                        <Text style={style.textbtn}>Daftar</Text>
+                    </TouchableOpacity>
                 </Form>
                 <View style={style.foot}>
                 <Text style={style.textAkun}>
@@ -178,11 +172,15 @@ const style = StyleSheet.create({
     btn: {
         backgroundColor: 'rgb(25,119,243)',
         marginLeft: "3%",
-        borderRadius: 10
+        borderRadius: 10,
+        height: 50,
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'center'
     },
     textbtn: {
         color: "rgb(255,255,255)",
-        fontSize: 20
+        fontSize: 20,
     },
     textKar: {
         marginLeft: "3%",

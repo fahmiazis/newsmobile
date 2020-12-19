@@ -30,8 +30,8 @@ class EditArticle extends Component {
     }
 
     componentDidMount(){
-        // const {id} = this.props.route.params
-        // await this.props.getDetailNews(id)
+        const {id} = this.props.route.params
+        this.props.getDetailNews(id)
         const {detail} = this.props.news
         if (detail.category_id === 1) {
             this.setState({one: true, category_id: detail.category_id})
@@ -59,8 +59,7 @@ class EditArticle extends Component {
             category_id: category_id
         }
         await this.props.editArticle(this.props.auth.token, id, data)
-        await this.props.getDetailNews(id)
-        await this.props.getMyArticle(this.props.auth.token)
+        this.props.getMyArticle(this.props.auth.token)
         this.props.navigation.navigate('Article')
     }
 
@@ -283,7 +282,9 @@ class EditArticle extends Component {
                                     <Label style={style.labelRadio}>Entertainment, Art & Culture</Label>
                                 </View>
                             </View>
-                            <Button onPress={handleSubmit} title="SAVE" color="black" />
+                            <TouchableOpacity onPress={handleSubmit} style={style.btn}>
+                                <Text style={style.textbtn}>SAVE</Text>
+                            </TouchableOpacity>
                         </View>
                         )}
                     </Formik>
@@ -398,5 +399,18 @@ const style = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius: 20,
-    }
+    },
+    btn: {
+        backgroundColor: 'rgb(0,0,0)',
+        marginLeft: "3%",
+        borderRadius: 10,
+        height: 40,
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'center'
+    },
+    textbtn: {
+        color: "rgb(255,255,255)",
+        fontSize: 20,
+    },
 })
