@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 import {View, Text, FlatList, StyleSheet, Button, ScrollView, TouchableOpacity} from 'react-native'
-
+import placeholder from '../assets/placeholder.png'
 import {connect} from 'react-redux'
 import article from '../redux/actions/article'
 import news from '../redux/actions/news'

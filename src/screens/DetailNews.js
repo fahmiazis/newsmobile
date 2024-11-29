@@ -2,7 +2,7 @@ import React, { Component } from 'react'
 import { Text, View, Image, StyleSheet, ScrollView } from 'react-native'
 
 import {connect} from 'react-redux'
-
+import placeholder from '../assets/placeholder.png'
 import news from '../redux/actions/news'
 
 class DetailNews extends Component {
@@ -13,7 +13,7 @@ class DetailNews extends Component {
             <View style={style.parent}>
                 <ScrollView>
                 <View style={style.parent}>
-                    <Image source={{uri: `http://54.147.40.208:6060${detail.picture}`}} style={style.img}/>
+                    <Image source={detail.picture === null ? placeholder : {uri: `http://54.147.40.208:6060${detail.picture}`}} style={style.img}/>
                     <View style={style.body}>
                         <Text style={style.title}>{detail.title}</Text>
                         <Text style={style.headline}>{detail.headline}</Text>

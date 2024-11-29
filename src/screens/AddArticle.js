@@ -2,7 +2,6 @@ import React, { Component } from 'react'
 import {Text, View, TextInput, StyleSheet, Image, ScrollView, Button, ToastAndroid, TouchableOpacity} from 'react-native'
 import {connect} from 'react-redux'
 import {Radio, Label} from 'native-base'
-import placeholder from '../assets/placeholder.png'
 import news from '../redux/actions/news'
 import article from '../redux/actions/article'
 import {Formik} from 'formik'
@@ -38,6 +37,7 @@ class EditArticle extends Component {
         }
         await this.props.addArticle(this.props.auth.token, data)
         const {post, alertMsg} = this.props.article
+        await this.props.getDetailNews(post.id)
         this.props.navigation.navigate('EditArticle', {id: post.id})
     }
 

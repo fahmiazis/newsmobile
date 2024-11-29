@@ -1,12 +1,12 @@
 import React from 'react'
 import {View, Image, TouchableOpacity, Text, StyleSheet} from 'react-native'
-
+import placeholder from '../assets/placeholder.png'
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'
 
 export default function RenderTerkini({list, onPress, onDelete}) {
     return (
         <View style={style.card}>
-            <Image source={{uri: `http://54.147.40.208:6060${list.picture}`}} style={style.imgCard} />   
+            <Image source={list.picture === null ? placeholder : {uri: `http://54.147.40.208:6060${list.picture}`}} style={style.imgCard} />   
             <View>
                 <View style={style.content}>
                     <Text style={style.category}>{list.category.name}</Text>

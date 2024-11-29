@@ -1,11 +1,12 @@
 import React from 'react'
 import {View, Image, TouchableOpacity, Text, StyleSheet} from 'react-native'
+import placeholder from '../assets/placeholder.png'
 
 export default function RenderHomeHeader({list, onPress}) {
     return (
         <TouchableOpacity onPress={onPress}>
             <View style={style.head}>
-                <Image style={style.img} source={{uri: `http://54.147.40.208:6060${list.picture}`}} />
+                <Image style={style.img} source={list.picture === null ? placeholder : {uri: `http://54.147.40.208:6060${list.picture}`}} />
                 <View style={style.textHead}>
                     <Text style={style.textImg}>
                         {list.title}
