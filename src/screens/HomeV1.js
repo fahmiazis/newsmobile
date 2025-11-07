@@ -1,281 +1,402 @@
-import React, {Component} from 'react'
-import { Text, View, StyleSheet, ScrollView, FlatList, ToastAndroid} from 'react-native'
+/* eslint-disable */
+import React, { Component } from "react";
+import { View, TouchableOpacity, RefreshControl, TextInput, Dimensions,
+  Text, StyleSheet, ImageBackground, Image, ScrollView, } from "react-native";
+import { db } from "../helpers/firebase";
+import { collection, onSnapshot } from "firebase/firestore";
+import imgBackground from '../assets/bckHome.jpg'
+import io from '../assets/io.png'
+import disposal from '../assets/dis.png'
+import mutasi from '../assets/mutasis.png'
+import stock from '../assets/opname.png'
 
-import RenderHomeHeader from './RenderHomeHeader'
-import RenderSorotan from './RenderSorotan'
-import RenderTerkini from './RenderTerkini'
+import {connect} from 'react-redux';
+import user from '../redux/actions/user'
+import newnotif from '../redux/actions/newnotif'
+import auth from '../redux/actions/auth'
+import dashboard from '../redux/actions/dashboard'
+import DateTimePicker from '@react-native-community/datetimepicker';
+import moment from 'moment'
 
-import {connect} from 'react-redux'
-import news from '../redux/actions/news'
-import article from '../redux/actions/article'
-import category from '../redux/actions/category'
-import bookmark from '../redux/actions/bookmark'
-import profile from '../redux/actions/profile'
+const { width } = Dimensions.get("window");
 
-class HomeV1 extends Component {
-    state = {
-        data: {},
-        loading: false
+class Home extends Component {
+  state = {
+    items: [],
+    onRefresh: false,
+    selectedYear: moment().startOf('month'),
+    showDate: false
+  };
+
+  componentDidMount() {
+    this.getDataDashboard()
+  }
+
+  getDataDashboard = async () => {
+    const token = this.props.auth.token
+    const {selectedYear} = this.state
+    await this.props.getDashboard(token, moment(selectedYear).format('YYYY'))
+  } 
+  // componentWillUnmount() {
+  //   this.getData()
+  // }
+
+  refreshPage = async () => {
+    this.setState({onRefresh: true});
+    const token = this.props.auth.token
+    await this.props.getAllNewNotif(token)
+    this.setState({onRefresh: false})
+  }
+
+  getData = async () => {
+      const token = this.props.auth.token
+      await this.props.getAllNewNotif(token)
+  }
+
+  goRoute = (val) => {
+    this.props.navigation.navigate(`${val}`)
+  }
+
+  setDate = (event, selectedDate, type) => {
+    this.setState({showDate: false});
+    if (selectedDate) {
+      this.setState({selectedYear: selectedDate});
+      this.getDataDashboard()
     }
+  };
 
-    componentDidMount(){
-        const {isLogin, token} = this.props.auth
-        if (isLogin === false && token === '') {
-            this.props.getSameNews()
-            this.props.sorotan()
-            this.props.getNews()
-            const {data} = this.props.news
-            this.setState({data: data})
-        } else {
-            this.props.getSameNews()
-            this.props.sorotan()
-            this.props.getNews()
-            this.props.getBookmark(this.props.auth.token)
-            this.props.getMyArticle(this.props.auth.token)
-            this.props.getProfile(this.props.auth.token)
-            const {data} = this.props.news
-            this.setState({data: data})
-        }
-    }
+  render() {
+    const { items, selectedYear, showDate } = this.state;
+    const { dataDashboard } = this.props.dashboard
 
-    isCloseToBottom({ layoutMeasurement, contentOffset, contentSize }) {
-        return layoutMeasurement.height + contentOffset.y 
-        >= contentSize.height - 50; }
+    return (
+      <ImageBackground
+          source={imgBackground}
+          style={styles.bg}
+          resizeMode="cover"
+      >
+        <ScrollView 
+          style={styles.container}
+          refreshControl={
+              <RefreshControl refreshing={this.state.onRefresh} onRefresh={this.refreshPage} />
+          }
+        >
+          
+          <Text style={styles.title}>Asset Mobile</Text>
+          <Text style={styles.subtitle}>Please select an option</Text>
 
-    goDetail = async (idNews) => {
-        const {id} = idNews 
-        await this.props.getDetailNews(id)
-        this.props.navigation.navigate('Detail')
-    }
+          <View style={styles.filterContainer}>
+            {/* <Text style={styles.filterLabel}>Select Year:</Text>
+            <TextInput
+              style={styles.yearInput}
+              value={selectedYear.toString()}
+              keyboardType="numeric"
+              onChangeText={(text) => this.setState({ selectedYear: text })}
+            /> */}
+            <Text>Selected Year:</Text>
+            <TouchableOpacity
+              style={styles.dateButton}
+              onPress={() => this.setState({showDate: true})}>
+              <Text style={styles.dateButtonText}>
+                 {moment(selectedYear).format('YYYY')}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-    nextPage = async () => {
-        const {isProccess, data} = this.props.news
-        const { nextLink } = data.pageInfo
-        if (nextLink && !isProccess) {
-            await this.props.nextGetNews(nextLink)
-            this.setState({data: data})
-        }
-    }
+          {showDate && (
+            <DateTimePicker
+              value={new Date(selectedYear)}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={(e, date) => this.setDate(e, date, 'from')}
+            />
+          )}
 
-    getTerkini = async () => {
-        this.setState({loading: true})
-        await this.props.getNews()
-        await this.props.sorotan(),
-        await this.props.getSameNews()
-        this.setState({loading: false})
-    }
-
-    addBookmark = async (idNews) => {
-        const {id} = idNews
-        const {isLogin, token} = this.props.auth
-        if (isLogin === false && token === '') {
-            ToastAndroid.show('login first', ToastAndroid.LONG)
-        } else {
-            const data = {newsId: id}
-            await this.props.addBookmark(this.props.auth.token, data)
-            await this.props.getBookmark(this.props.auth.token)
-            ToastAndroid.show('successfully added to bookmarks', ToastAndroid.LONG)
-        }
-    }
-
-
-    render(){
-        const {data, same, sorotan} = this.props.news
-        const {loading} = this.state
-        const {bookmark} = this.props.bookmark
-        return(
-            <View style={style.parent}>
-                <View>
-                <FlatList
-                    horizontal = {true}
-                    data = {Object.keys(same).length > 0 && same.data.rows}
-                    refreshing={loading}
-                    onRefresh={this.getTerkini}
-                    renderItem = {({item}) => (
-                    <RenderHomeHeader
-                    onPress={() => this.goDetail({id: item.id})}
-                    list={item} 
-                    />
-                    )}
-                    keyExtractor={(item) => item.id.toString()}
-                    />
-                </View>
-                <ScrollView
-                onScroll={({ nativeEvent }) => {
-                if (this.isCloseToBottom(nativeEvent)) {                
-                    this.nextPage(); }}}
-                >
-                <View style={[style.secSorotan, style.parent]}>
-                    <View style={style.sorotan}>
-                        <Text style={style.textSorotan}>SOROTAN</Text>
+          <View style={styles.body}>
+            {/* Pengadaan */}
+            <TouchableOpacity style={styles.assetCard} >
+              <Image source={io} style={styles.watermark} />
+              <Text style={styles.cardTitle}>Pengadaan Aset</Text>
+              {(dataDashboard.length > 0 && dataDashboard.filter(x => x.transaksi === 'pengadaan').length > 0 ? dataDashboard.filter(x => x.transaksi === 'pengadaan') : [1]).map(item => {
+                return (
+                  <View style={styles.statsContainer} key={item === 1 ? 1 : item.transaksi}>
+                    <View style={styles.statsRow}>
+                      <Text style={styles.statsLabel}>Total</Text>
+                      <Text style={styles.statsValue}>{item === 1 ? 0 : item.totalData}</Text>
                     </View>
-                    <View>
-                        <FlatList
-                            data = {Object.keys(sorotan).length > 0 && sorotan.data.rows}
-                            // refreshing={loading}
-                            // onRefresh={this.getTerkini}
-                            renderItem = {({item}) => (
-                            <RenderSorotan
-                            onPress={() => this.goDetail({id: item.id})}
-                            onBookmark={() => this.addBookmark({id: item.id})}
-                            list={item}
-                            />
-                            )}
-                            keyExtractor={(item) => item.id.toString()}
-                            />
+                    <View style={styles.statsRow}>
+                      <Text style={styles.statsLabel}>Finished</Text>
+                      <Text style={styles.statsValue}>{item === 1 ? 0 : item.finished}</Text>
                     </View>
-                </View>
-                <View style={[style.secSorotan, style.parent]}>
-                    <View style={style.sorotan}>
-                        <Text style={style.textSorotan}>TERKINI</Text>
+                    <View style={styles.statsRow}>
+                      <Text style={styles.statsLabel}>In progress</Text>
+                      <Text style={styles.statsValue}>{item === 1 ? 0 : (item.totalData - (item.finished + item.rejected + item.revisi))}</Text>
                     </View>
-                    <View>
-                        <FlatList
-                            data = {Object.keys(data).length > 0 && data.data.rows}
-                            onEndReached={this.nextPage}
-                            onEndReachedThreshold={0.5}
-                            // refreshing={loading}
-                            // onRefresh={this.getTerkini}
-                            renderItem = {({item}) => (
-                            <RenderTerkini
-                            onPress={() => this.goDetail({id: item.id})}
-                            list={item}
-                            onBookmark={() => this.addBookmark({id: item.id})}
-                            />
-                            )}
-                            keyExtractor={(item) => item.id.toString()}
-                            />
+                    <View style={styles.statsRow}>
+                      <Text style={styles.statsLabel}>Rejected</Text>
+                      <Text style={styles.statsValue}>{item === 1 ? 0 : item.rejected}</Text>
                     </View>
-                </View>
-                </ScrollView>
-            </View>
-        );
-    }
+                    <View style={styles.statsRow}>
+                      <Text style={styles.statsLabel}>Revisi</Text>
+                      <Text style={styles.statsValue}>{item === 1 ? 0 : item.revisi}</Text>
+                    </View>
+                  </View>
+                )
+              })}
+              <TouchableOpacity style={styles.btnDetail} onPress={() => this.goRoute('PengadaanTab')}>
+                <Text style={styles.txtBtn}>Detail</Text>
+              </TouchableOpacity>
+              {/* <Image source={io} style={styles.imgCard} />
+              <Text>Pengadaan Aset</Text> */}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.assetCard}>
+              <Image source={disposal} style={styles.watermark} />
+              <Text style={styles.cardTitle}>Disposal Aset</Text>
+              {(dataDashboard.length > 0 && dataDashboard.filter(x => x.transaksi === 'disposal').length > 0 ? dataDashboard.filter(x => x.transaksi === 'disposal') : [1]).map(item => {
+                return (
+                  <View style={styles.statsContainer} key={item === 1 ? 1 : item.transaksi}>
+                    <View style={styles.statsRow}>
+                      <Text style={styles.statsLabel}>Total</Text>
+                      <Text style={styles.statsValue}>{item === 1 ? 0 : item.totalData}</Text>
+                    </View>
+                    <View style={styles.statsRow}>
+                      <Text style={styles.statsLabel}>Finished</Text>
+                      <Text style={styles.statsValue}>{item === 1 ? 0 : item.finished}</Text>
+                    </View>
+                    <View style={styles.statsRow}>
+                      <Text style={styles.statsLabel}>In progress</Text>
+                      <Text style={styles.statsValue}>{item === 1 ? 0 : (item.totalData - (item.finished + item.rejected + item.revisi))}</Text>
+                    </View>
+                    <View style={styles.statsRow}>
+                      <Text style={styles.statsLabel}>Rejected</Text>
+                      <Text style={styles.statsValue}>{item === 1 ? 0 : item.rejected}</Text>
+                    </View>
+                    <View style={styles.statsRow}>
+                      <Text style={styles.statsLabel}>Revisi</Text>
+                      <Text style={styles.statsValue}>{item === 1 ? 0 : item.revisi}</Text>
+                    </View>
+                  </View>
+                )
+              })}
+              <TouchableOpacity style={styles.btnDetail} onPress={() => this.goRoute('DisposalTab')}>
+                <Text style={styles.txtBtn}>Detail</Text>
+              </TouchableOpacity>
+              {/* <Image source={disposal} style={styles.imgCard} />
+              <Text>Disposal Aset</Text> */}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.assetCard} >
+              <Image source={stock} style={styles.watermark} />
+              <Text style={styles.cardTitle}>Stock Opname Aset</Text>
+              {(dataDashboard.length > 0 && dataDashboard.filter(x => x.transaksi === 'stock opname').length > 0 ? dataDashboard.filter(x => x.transaksi === 'stock opname') : [1]).map(item => {
+                return (
+                  <View style={styles.statsContainer} key={item === 1 ? 1 : item.transaksi}>
+                    <View style={styles.statsRow}>
+                      <Text style={styles.statsLabel}>Total</Text>
+                      <Text style={styles.statsValue}>{item === 1 ? 0 : item.totalData}</Text>
+                    </View>
+                    <View style={styles.statsRow}>
+                      <Text style={styles.statsLabel}>Finished</Text>
+                      <Text style={styles.statsValue}>{item === 1 ? 0 : item.finished}</Text>
+                    </View>
+                    <View style={styles.statsRow}>
+                      <Text style={styles.statsLabel}>In progress</Text>
+                      <Text style={styles.statsValue}>{item === 1 ? 0 : (item.totalData - (item.finished + item.rejected + item.revisi))}</Text>
+                    </View>
+                    <View style={styles.statsRow}>
+                      <Text style={styles.statsLabel}>Rejected</Text>
+                      <Text style={styles.statsValue}>{item === 1 ? 0 : item.rejected}</Text>
+                    </View>
+                    <View style={styles.statsRow}>
+                      <Text style={styles.statsLabel}>Revisi</Text>
+                      <Text style={styles.statsValue}>{item === 1 ? 0 : item.revisi}</Text>
+                    </View>
+                  </View>
+                )
+              })}
+              <TouchableOpacity style={styles.btnDetail} onPress={() => this.goRoute('StockTab')}>
+                <Text style={styles.txtBtn}>Detail</Text>
+              </TouchableOpacity>
+              {/* <Image source={stock} style={styles.imgCard} />
+              <Text>Stock Opname Aset</Text> */}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.assetCard} >
+              <Image source={mutasi} style={styles.watermark} />
+              <Text style={styles.cardTitle}>Mutasi Aset</Text>
+              {(dataDashboard.length > 0 && dataDashboard.filter(x => x.transaksi === 'mutasi').length > 0 ? dataDashboard.filter(x => x.transaksi === 'mutasi') : [1]).map(item => {
+                return (
+                  <View style={styles.statsContainer} key={item === 1 ? 1 : item.transaksi}>
+                    <View style={styles.statsRow}>
+                      <Text style={styles.statsLabel}>Total</Text>
+                      <Text style={styles.statsValue}>{item === 1 ? 0 : item.totalData}</Text>
+                    </View>
+                    <View style={styles.statsRow}>
+                      <Text style={styles.statsLabel}>Finished</Text>
+                      <Text style={styles.statsValue}>{item === 1 ? 0 : item.finished}</Text>
+                    </View>
+                    <View style={styles.statsRow}>
+                      <Text style={styles.statsLabel}>In progress</Text>
+                      <Text style={styles.statsValue}>{item === 1 ? 0 : (item.totalData - (item.finished + item.rejected + item.revisi))}</Text>
+                    </View>
+                    <View style={styles.statsRow}>
+                      <Text style={styles.statsLabel}>Rejected</Text>
+                      <Text style={styles.statsValue}>{item === 1 ? 0 : item.rejected}</Text>
+                    </View>
+                    <View style={styles.statsRow}>
+                      <Text style={styles.statsLabel}>Revisi</Text>
+                      <Text style={styles.statsValue}>{item === 1 ? 0 : item.revisi}</Text>
+                    </View>
+                  </View>
+                )
+              })}
+              <TouchableOpacity style={styles.btnDetail} onPress={() => this.goRoute('MutasiTab')}>
+                <Text style={styles.txtBtn}>Detail</Text>
+              </TouchableOpacity>
+              {/* <Image source={mutasi} style={styles.imgCard} />
+              <Text>Mutasi Aset</Text> */}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </ImageBackground>
+      
+    );
+  }
 }
 
-const style = StyleSheet.create({
-    parent: {
-        flex: 1
-    },
-    scrollHead: {
-        borderBottomWidth: 5,
-        borderColor: "rgb(164,164,164)",
-        height: 250,
-    },
-    head: {
-        position: "relative",
-        display: "flex",
-        width: 300,
-        height: 200,
-        paddingBottom: 10,
-    },
-    img: {
-        width: 300,
-        height: 200,
-    },
-    textHead:{
-        position: "absolute",
-        marginTop: "35%",
-        backgroundColor: "rgba(0,0,0,0.4)",
-        height: 95,
-        width: "100%"
-    },
-    textImg:{
-        fontSize: 20,
-        color: "white",
-        fontWeight: "bold",
-        marginLeft: 10,
-        textShadowColor: "rgb(0,0,0)",
-        textShadowOffset: {
-            width: 1,
-            height: 1
-        },
-        textShadowRadius: 1
-    },
-    card: {
-        flexDirection: "row",
-        width: "100%",
-        height: 170,
-        borderBottomWidth: 1,
-        borderColor: "rgb(164,164,164)",
-        marginTop: 30
-    },
-    cardTerkini: {
-        flexDirection: "row-reverse",
-        width: "100%",
-        height: 170,
-        borderBottomWidth: 1,
-        borderColor: "rgb(164,164,164)",
-        marginTop: 30
-    },
-    imgCard: {
-        width: 150,
-        height: 150
-    },
-    sorotan: {
-        width: "100%",
-        height: 40,
-        borderBottomWidth: 1,
-        borderColor: "rgb(164,164,164)"
-    },
-    textSorotan: {
-        fontWeight: "bold",
-        fontSize: 15,
-        width: 70,
-        height: 40,
-        borderBottomWidth: 6,
-        borderColor: "rgb(86,173,201)",
-    },
-    content: {
-        flexDirection: "column",
-        width: 280,
-        height: 150,
-        marginLeft: 10,
-        flex: 1
-    },
-    secSorotan: {
-        paddingHorizontal: "5%",
-        marginTop: 20
-    },
-    category: {
-        color: "rgb(164,164,164)",
-        marginBottom: 5,
-    },
-    title: {
-        fontSize: 15,
-        fontWeight: "bold"
-    },
-    footerTerkini: {
-        flexDirection: "row",
-        marginBottom: 15,
-        marginLeft: 10
-    },
-    footer: {
-        flexDirection: "row-reverse",
-        marginBottom: 15,
-        marginLeft: 10
-    }
-})
-
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginTop: 40,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 15,
+    fontWeight: "500",
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  bg: {
+    flex: 1,
+  },
+  body: {
+    marginTop: 10,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  assetCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    borderRadius: 10,
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    padding: 12,
+    marginBottom: 12,
+    width: width / 2.3,   // otomatis 2 kolom
+    minHeight: 200,       // biar gak kependekan
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+  },
+  statsContainer: {
+    marginTop: 6,
+    width: '100%',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 2,
+  },
+  statsLabel: {
+    fontSize: 12,
+    color: '#333',
+  },
+  statsValue: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#111',
+  },
+  watermark: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    opacity: 0.2,
+    resizeMode: 'contain',
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 8,
+    color: '#111',
+    alignSelf: 'flex-start',
+  },
+  btnDetail: {
+    marginTop: 'auto',   // tombol selalu di bawah
+    height: 32,
+    backgroundColor: '#e35d5b',
+    width: '100%',
+    borderRadius: 8,
+    justifyContent: 'center',
+  },
+  txtBtn: {
+    color: 'white',
+    textAlign: 'center',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    marginTop: 20,
+    marginLeft: 10,
+  },
+  filterLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginRight: 10,
+  },
+  yearInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    width: 80,
+    textAlign: 'center',
+  },
+  dateButton: {
+    backgroundColor: '#fff',
+    padding: 6,
+    borderRadius: 8,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    width: width * 0.2,   // fleksibel sesuai layar
+  },
+  dateButtonText: {
+    fontSize: 13,
+    color: '#333',
+    textAlign: 'center',
+  },
+});
 
 const mapStateToProps = state => ({
-    news: state.news,
     auth: state.auth,
-    category: state.category,
-    bookmark: state.bookmark,
+    user: state.user,
+    newnotif: state.newnotif,
+    dashboard: state.dashboard
 })
-  
+
 const mapDispatchToProps = {
-    getNews: news.getNews,
-    getCategory: category.getCategory,
-    getSameNews: news.getSameNews,
-    sorotan: news.sorotan,
-    nextGetNews: news.nextGetNews,
-    getDetailNews: news.getDetailNews,
-    getBookmark: bookmark.getBookmark,
-    addBookmark: bookmark.addBookmark,
-    getMyArticle: article.getMyArticle,
-    getProfile: profile.getProfile
+    updateUser: user.updateUser,
+    reset: user.resetError,
+    logout: auth.logout,
+    changePassword: user.changePassword,
+    getAllNewNotif: newnotif.getAllNewNotif,
+    getDashboard: dashboard.getDashboard
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(HomeV1)
+export default connect(mapStateToProps, mapDispatchToProps)(Home)

@@ -1,205 +1,265 @@
-import React, { Component } from 'react'
-import { Text, View, StyleSheet, ToastAndroid, ScrollView, TouchableOpacity } from 'react-native'
-import { Button, Input, Item, Form, Left } from 'native-base'
+/* eslint-disable prettier/prettier */
+/* eslint-disable semi */
+import React, { Component } from 'react';
+import {
+    Text,
+    View,
+    StyleSheet,
+    ToastAndroid,
+    ScrollView,
+    TouchableOpacity,
+    ImageBackground,
+    Image
+} from 'react-native';
+import { Button, Input, Item, Form, Left } from 'native-base';
 
-import Icon from 'react-native-vector-icons/FontAwesome5'
-import {Formik} from 'formik'
-import * as Yup from 'yup'
-import {connect} from 'react-redux'
-import bookmark from '../redux/actions/bookmark'
-import article from '../redux/actions/article'
-import auth from '../redux/actions/auth'
-import profile from '../redux/actions/profile'
+import IconAwe from 'react-native-vector-icons/FontAwesome5';
+import { Formik } from 'formik';
+import * as Yup from 'yup';
+import { connect } from 'react-redux';
+import bookmark from '../redux/actions/bookmark';
+import article from '../redux/actions/article';
+import auth from '../redux/actions/auth';
+import profile from '../redux/actions/profile';
+import logo from '../assets/logo.png'
+import imgBackground from '../assets/loginOffice.webp'
 
 const loginSchema = Yup.object().shape({
-    email: Yup.string().required('must be filled'),
+    username: Yup.string().required('must be filled'),
     password: Yup.string().required('must be filled'),
-  });
+});
 
 class Login extends Component {
     state = {
-        email: '',
+        username: '',
         password: '',
-    }
+    };
     login = async (values) => {
         ToastAndroid.show('waiting...', ToastAndroid.LONG);
-        await this.props.login(values)
-    }
+        await this.props.login(values);
+    };
 
-    componentDidUpdate(){
-        const {isError, isLogin} = this.props.auth
+    componentDidUpdate() {
+        const { isError, isLogin } = this.props.auth;
         if (isLogin) {
             ToastAndroid.show('Login succesfully', ToastAndroid.LONG);
-            this.props.navigation.navigate('Tabbed')
-        }
-        else if (isError) {
-            ToastAndroid.show('wrong email or password', ToastAndroid.LONG);
+            this.props.navigation.navigate('Tabbed');
+        } else if (isError) {
+            ToastAndroid.show('wrong username or password', ToastAndroid.LONG);
         }
     }
 
     render() {
         return (
-            <ScrollView>
-            <View style={style.parent}>
-                <View style={style.form}>
-                    <Text style={style.sign}> Sign In </Text>
-                    <Text style={style.textHead}>Gunakan account NewsId untuk sign in di News.com</Text>
-                    <Formik
-                        initialValues={{
-                        email: '',
-                        password: ''
-                        }}
-                        validationSchema={loginSchema}
-                        onSubmit={(values) => {
-                        this.login(values)
-                        }}>
-                        {({ handleChange, handleBlur, handleSubmit, values, errors, touched,
-                        }) => (
-                        <Form>
-                            <Item style={style.input}>
-                                <Input
-                                onChangeText={handleChange('email')}
-                                placeholder="Email"
-                                onBlur={handleBlur('email')}
-                                value={values.email}
-                                />
-                            </Item>
-                            {errors.email ? (
-                                <Text style={style.txtError}>{errors.email}</Text>
-                            ) : null}
-                            <Item style={style.input}>
-                                <Input
-                                onChangeText={handleChange('password')}
-                                secureTextEntry
-                                value={values.password}
-                                placeholder="Password"
-                                onBlur={handleBlur('password')}
-                                />
-                            </Item>
-                            {errors.password ? (
-                                <Text style={style.txtError}>{errors.password}</Text>
-                            ) : null}
-                            <TouchableOpacity style={[style.btn, style.color]} onPress={handleSubmit}>
-                                <Text style={style.textLogin}>LOGIN</Text>
-                            </TouchableOpacity>
-                        </Form>
-                        )}
-                    </Formik>
-                    <Text style={style.forgot}>Lupa Password</Text>
-                    <Text style={style.or}>Atau gunakan</Text>
-                    <Button block style={[style.btn, style.btnfb]}><Icon style={style.iconfb} name="facebook" color="rgb(255,255,255)" size={20}/><Text style={style.textfb}>Continue with Facebook</Text></Button>
-                    <Button block style={[style.btn, style.btngo]}><Icon style={style.iconfb} name="google-plus-g" color="rgb(0,0,0)" size={20}/><Text style={style.textgo}>Sign in with Google</Text></Button>
-                    <Text style={style.or}>Belum punya account</Text>
-                    <TouchableOpacity style={[style.btn, style.regis, style.color]} onPress={() => this.props.navigation.navigate("Register")}><Text style={style.textLogin}>DAFTAR SEKARANG</Text></TouchableOpacity>
-                </View>
-            </View>
-            </ScrollView>
+            <ImageBackground
+                source={imgBackground}
+                style={style.bg}
+                resizeMode="cover"
+            >
+                <ScrollView
+                    // eslint-disable-next-line react-native/no-inline-styles
+                    contentContainerStyle={style.scroll}
+                    keyboardShouldPersistTaps="handled"
+
+                >
+                    <View style={style.parent}>
+                        <View style={style.form}>
+                            {/* <Text style={style.sign}> Sign In </Text> */}
+                            <Image source={logo} style={style.logo} />
+                            <Text style={style.textHead}>
+                                Please login with your account
+                            </Text>
+                            <Formik
+                                initialValues={{
+                                    username: '',
+                                    password: '',
+                                }}
+                                validationSchema={loginSchema}
+                                onSubmit={(values) => {
+                                    this.login(values);
+                                }}>
+                                {({
+                                    handleChange,
+                                    handleBlur,
+                                    handleSubmit,
+                                    values,
+                                    errors,
+                                    touched,
+                                }) => (
+                                    <Form>
+                                        <Item style={[style.input, errors.username ? style.mrError : style.mrNormal]}>
+                                            <Input
+                                                onChangeText={handleChange('username')}
+                                                placeholder="Username"
+                                                onBlur={handleBlur('username')}
+                                                value={values.username}
+                                            />
+                                        </Item>
+                                        {errors.username ? (
+                                            <Text style={style.txtError}>{errors.username}</Text>
+                                        ) : null}
+                                        <Item style={[style.input, errors.password ? style.mrError : style.mrNormal]}>
+                                            <Input
+                                                onChangeText={handleChange('password')}
+                                                secureTextEntry
+                                                value={values.password}
+                                                placeholder="Password"
+                                                onBlur={handleBlur('password')}
+                                            />
+                                        </Item>
+                                        {errors.password ? (
+                                            <Text style={style.txtError}>{errors.password}</Text>
+                                        ) : null}
+                                        <TouchableOpacity
+                                            style={[style.btn]}
+                                            onPress={handleSubmit}>
+                                            <Text style={style.textLogin}>LOGIN</Text>
+                                        </TouchableOpacity>
+                                    </Form>
+                                )}
+                            </Formik>
+                            <View style={style.footer}>
+                                <IconAwe name="copyright" size={10} color="#c0392b"/>
+                                <Text style={style.txtfoot}>
+                                    ASET-PMA 2025
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+                </ScrollView>
+            </ImageBackground>
         );
     }
 }
 
-const mapStateToProps = state => ({
-    auth: state.auth
-})
+const mapStateToProps = (state) => ({
+    auth: state.auth,
+});
 
 const mapDispatchToProps = {
     login: auth.login,
     getProfile: profile.getProfile,
-}
+};
 
 export default connect(mapStateToProps, mapDispatchToProps)(Login);
 
 const style = StyleSheet.create({
+    bg: {
+        flex: 1,
+    },
+    scroll: {
+        flexGrow: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
     parent: {
         flex: 1,
-        justifyContent: "center",
-        alignItems: "center"
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: '100%',
     },
     form: {
-        width: "90%",
+        width: '90%',
+        backgroundColor: 'rgba(255,255,255,0.85)',
+        padding: 20,
+        borderRadius: 15,
+        elevation: 5,
     },
     sign: {
         fontSize: 30,
-        fontWeight: "bold",
+        fontWeight: 'bold',
         marginBottom: 30,
-        color: "rgb(108,108,108)",
-        textAlign: "center"
+        color: 'rgb(108,108,108)',
+        textAlign: 'center',
     },
     textHead: {
         fontSize: 15,
-        color: "rgb(108,108,108)",
+        fontWeight: 'bold',
+        color: '#c0392b',
         marginBottom: 10,
-        textAlign: "center"
+        textAlign: 'center',
     },
     input: {
-        borderColor: "rgb(164,164,164)",
+        borderColor: 'rgb(164,164,164)',
         borderRadius: 10,
         borderTopWidth: 2,
         borderBottomWidth: 2,
         borderLeftWidth: 2,
         borderRightWidth: 2,
-        backgroundColor: "rgb(255,255,255)",
-        marginBottom: 20,
-        paddingHorizontal: 5
+        backgroundColor: 'rgb(255,255,255)',
+        paddingHorizontal: 5,
     },
     color: {
-        backgroundColor: 'rgb(25,119,243)',
+        backgroundColor: "#c0392b",
         alignItems: 'center',
         flexDirection: 'row',
-        justifyContent: 'center'
+        justifyContent: 'center',
     },
     btn: {
         borderRadius: 10,
-        marginLeft: "3%",
-        height: 50
-    },
-    forgot: {
-        textAlign: "right",
-        marginVertical: 10,
-        color: "rgb(108,108,108)"
+        marginLeft: 18,
+        backgroundColor: '#c0392b',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: 50,
+        marginTop: 10,
+        width: '92%',
     },
     or: {
-        textAlign: "center",
-        color: "rgb(108,108,108)",
+        textAlign: 'center',
+        color: 'rgb(108,108,108)',
         marginBottom: 10,
     },
     textLogin: {
-        color: "rgb(255,255,255)",
+        color: 'rgb(255,255,255)',
         fontSize: 15,
-        fontWeight: '400'
-    },
-    btnfb: {
-        marginBottom: 20,
-        backgroundColor: 'rgb(25,119,243)',   
-        flexDirection: "row",
-        paddingLeft: 10
+        fontWeight: '400',
     },
     textfb: {
-        color: "rgb(255,255,255)",
-        textAlign: "center",
-        position: "absolute",
+        color: 'rgb(255,255,255)',
+        textAlign: 'center',
+        position: 'absolute',
     },
     textgo: {
-        textAlign: "center",
-        position: "absolute",
+        textAlign: 'center',
+        position: 'absolute',
     },
     iconfb: {
-        marginRight: "90%"
-    },
-    btngo: {
-        marginBottom: 20,
-        backgroundColor: "rgb(255,255,255)",
-        elevation: 2,
-        flexDirection: "row",
-        paddingLeft: 10
+        marginRight: '90%',
     },
     regis: {
         marginTop: 10,
+    },
+    mrError: {
+        marginBottom: 5,
+    },
+    mrNormal: {
+        marginBottom: 20,
     },
     txtError: {
         marginLeft: 20,
         fontSize: 13,
         color: 'red',
-        marginBottom: 20
+        marginBottom: 15,
     },
-})
+    logo: {
+        width: 60,
+        height: 80,
+        alignSelf: 'center',
+        marginBottom: 30,
+    },
+    footer: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginLeft: 18,
+        marginVertical: 10,
+    },
+    txtfoot: {
+        textAlign: 'right',
+        marginLeft: 5,
+        color: '#c0392b',
+    },
+});

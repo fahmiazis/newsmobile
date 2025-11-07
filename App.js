@@ -1,7 +1,10 @@
+/* eslint-disable */
 import React, { Component } from 'react'
 import {Provider} from 'react-redux'
 import {PersistGate} from 'redux-persist/integration/react'
 import SplashScreen from 'react-native-splash-screen'
+import { NavigationContainer } from '@react-navigation/native'
+import { navigationRef } from './src/helpers/navigation'
 
 import store from './src/redux/store'
 
@@ -16,7 +19,9 @@ export default class App extends Component {
         return (
             <Provider store={store().store}>
                 <PersistGate loading={null} persistor={store().persistor}>
-                    <Main />
+                    <NavigationContainer ref={navigationRef}>
+                        <Main />
+                    </NavigationContainer>
                 </PersistGate>
             </Provider>
         );
