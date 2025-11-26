@@ -14,6 +14,7 @@ import { connect } from 'react-redux';
 import pengadaan from '../redux/actions/pengadaan';
 import mutasi from '../redux/actions/mutasi';
 import disposal from '../redux/actions/disposal';
+import stock from '../redux/actions/stock';
 import dokumen from '../redux/actions/dokumen';
 import Pdf from 'react-native-pdf';
 import RNFS from 'react-native-fs';
@@ -28,22 +29,7 @@ class ModalDokumen extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      documents: [
-        {
-          id: 1,
-          name: 'UJI COBA WEB ASSET.pdf',
-          url: `${API_URL}/show/doc/5647`,
-          selected: false,
-          expanded: true,
-        },
-        {
-          id: 2,
-          name: 'Purchase Request.pdf',
-          url: `${API_URL}/show/doc/5035`,
-          selected: false,
-          expanded: true,
-        },
-      ],
+      documents: [],
       cekDoc: [],
       loading: false,
       dataColl: [],
@@ -136,8 +122,10 @@ class ModalDokumen extends Component {
 
   downloadAndZip = async () => {
     try {
-      const { documents } = this.state;
-      const selectedDocs = documents.filter((doc) => doc.selected);
+      const { arrDoc } = this.props.parDoc;
+      const { cekDoc } = this.state;
+      const selectedDocs = arrDoc.filter((doc) => cekDoc.find(x => x === doc.id) !== undefined);
+      
       if (selectedDocs.length === 0) {
         Alert.alert('Error', 'Pilih minimal 1 dokumen');
         return;
@@ -145,34 +133,63 @@ class ModalDokumen extends Component {
 
       this.setState({ loading: true });
 
-      const downloadDir = RNFS.DownloadDirectoryPath + '/tempDocs';
+      // 1. Buat folder temp dengan timestamp (avoid conflict)
+      const timestamp = Date.now();
+      const downloadDir = `${RNFS.DownloadDirectoryPath}/tempDocs_${timestamp}`;
+      
+      // Pastikan folder dibuat dengan await
       await RNFS.mkdir(downloadDir);
 
-      const filePaths = [];
+      // 2. Download semua file
+      const downloadPromises = selectedDocs.map(async (doc) => {
+        const filePath = `${downloadDir}/${doc.nama_dokumen}`;
+        try {
+          await RNFS.downloadFile({
+            fromUrl: `${API_URL}/show/doc/${doc.id}`,
+            toFile: filePath,
+          }).promise;
+          return filePath;
+        } catch (err) {
+          console.log(`Failed to download ${doc.nama_dokumen}:`, err);
+          throw err;
+        }
+      });
 
-      for (const doc of selectedDocs) {
-        const filePath = `${downloadDir}/${doc.name}`;
-        await RNFS.downloadFile({
-          fromUrl: doc.url,
-          toFile: filePath,
-        }).promise;
-        filePaths.push(filePath);
+      // Tunggu semua download selesai
+      const filePaths = await Promise.all(downloadPromises);
+      
+      // 3. Verifikasi file ada sebelum zip
+      const filesExist = await Promise.all(
+        filePaths.map(path => RNFS.exists(path))
+      );
+      
+      if (!filesExist.every(exists => exists)) {
+        throw new Error('Some files failed to download');
       }
 
-      const zipPath = `${RNFS.DownloadDirectoryPath}/DokumenTerpilih.zip`;
+      // 4. Zip folder
+      const zipPath = `${RNFS.DownloadDirectoryPath}/Dokumen_Mobile_Asset_${timestamp}.zip`;
       await zip(downloadDir, zipPath);
 
+      // 5. Cleanup temp folder
       await RNFS.unlink(downloadDir);
+
+      // 6. Verifikasi zip berhasil dibuat
+      const zipExists = await RNFS.exists(zipPath);
+      if (!zipExists) {
+        throw new Error('Failed to create zip file');
+      }
 
       Alert.alert(
         'Sukses',
-        `Dokumen berhasil di-zip:\n${zipPath}`,
+        `${selectedDocs.length} dokumen berhasil di-zip:\n${zipPath}`,
         [{ text: 'Tutup' }],
         { cancelable: true }
       );
+      
     } catch (error) {
-      console.log(error);
-      Alert.alert('Error', 'Gagal mendownload atau mengompres file');
+      console.log('Download/Zip error:', error);
+      Alert.alert('Error', `Gagal mendownload atau mengompres file: ${error.message}`);
     } finally {
       this.setState({ loading: false });
     }
@@ -259,6 +276,8 @@ class ModalDokumen extends Component {
         } else if (tipe === 'mutasi') {
           await this.props.getDetailMutasi(token, noDoc);
           await this.props.getDocumentMut(token, noDoc, noDoc);
+        } else if (tipe === 'stock') {
+          await this.props.getDocumentStock(token, noDoc);
         } else {
           await this.props.getDocCart(token, noDoc);
         }
@@ -968,6 +987,7 @@ const mapDispatchToProps = {
   getDetailMutasi: mutasi.getDetailMutasi,
   getDocumentMut: mutasi.getDocumentMut,
   getDocumentDis: disposal.getDocumentDis,
+  getDocumentStock: stock.getDocumentStock,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(ModalDokumen);

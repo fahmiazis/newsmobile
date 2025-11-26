@@ -77,6 +77,7 @@ class Pengadaan extends Component {
       reason: '',
       total: 0,
       detailData: {},
+      noIo: '',
     };
   }
 
@@ -383,7 +384,7 @@ class Pengadaan extends Component {
       }
       finalApp.push(tempApp);
     }
-    this.setState({realApp: finalApp.reverse()});
+    this.setState({realApp: finalApp.reverse(), noIo: detailIo[0].no_io !== null ? detailIo[0].no_io : ''});
     this.setState({loading: false});
   }
 
@@ -432,10 +433,10 @@ class Pengadaan extends Component {
   }
 
   updateNomorIo = async (val) => {
-    const { value } = this.state;
+    const { noIo } = this.state;
     const {dataUser, token} = this.props.auth;
     const data = {
-        no_io: val.type === 'sap' ? val.val.no_pengadaan : value,
+        no_io: val.type === 'sap' ? val.val.no_pengadaan : noIo,
         no: val.val.no_pengadaan,
         type: val.type,
     };
@@ -1124,9 +1125,13 @@ class Pengadaan extends Component {
                <View style={styles.sectionModal}>
                 <Text style={styles.sectionTitleModal}>Nomor IO</Text>
                 <View style={styles.assetCardModal}>
-                  <Text>{detailIo.length > 0 && detailIo[0].no_io !== null ? detailIo[0].no_io : '-'}</Text>
+                  <TextInput
+                    value={this.state.noIo}
+                    placeholder='-'
+                    onChangeText={val => this.setState({noIo: val})}
+                  />
                 </View>
-                {(level === 8) && filter === 'available' ? (
+                {/* {(level === 8) && filter === 'available' ? (
                   <TouchableOpacity
                     style={[styles.buttonDoc, styles.btnColorApprove]}
                     onPress={() => this.updateNomorIo({val: detailIo[0], type: 'sap'})}
@@ -1134,6 +1139,19 @@ class Pengadaan extends Component {
                   >
                     <Text style={styles.buttonTextModal}>
                       Generate By SAP
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  null
+                )} */}
+                {(level === 8) && filter === 'available' ? (
+                  <TouchableOpacity
+                    style={[styles.buttonDoc, styles.btnColorApprove]}
+                    onPress={() => this.updateNomorIo({val: detailIo[0], type: 'web'})}
+
+                  >
+                    <Text style={styles.buttonTextModal}>
+                      Update Nomor IO
                     </Text>
                   </TouchableOpacity>
                 ) : (

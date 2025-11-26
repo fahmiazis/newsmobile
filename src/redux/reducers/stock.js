@@ -57,6 +57,7 @@ const stockState = {
   dataDepo: [],
   isDocStock: null,
   dataSearch: [],
+  isDeleteAdd: null,
 };
 
 export default (state = stockState, action) => {
@@ -536,6 +537,31 @@ export default (state = stockState, action) => {
         alertMsg: 'Unable connect to server',
       };
     }
+    case 'DELETE_ADDSTOCK_PENDING': {
+      return {
+        ...state,
+        isDelete: false,
+        isLoading: true,
+        alertMsg: 'Waiting ...',
+      };
+    }
+    case 'DELETE_ADDSTOCK_FULFILLED': {
+      return {
+        ...state,
+        isLoading: false,
+        isError: false,
+        isDeleteAdd: true,
+        alertMsg: 'delete stock Succesfully',
+      };
+    }
+    case 'DELETE_ADDSTOCK_REJECTED': {
+      return {
+        ...state,
+        isLoading: false,
+        isDeleteAdd: false,
+        alertMsg: 'Unable connect to server',
+      };
+    }
     case 'UPLOAD_PICTURE_PENDING': {
       return {
         ...state,
@@ -690,6 +716,7 @@ export default (state = stockState, action) => {
         ...state,
         isError: false,
         isDelete: false,
+        isDeleteAdd: null,
         isUpload: false,
         isGet: false,
         isExport: false,

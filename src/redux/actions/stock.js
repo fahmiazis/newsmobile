@@ -99,6 +99,10 @@ export default {
     type: 'DELETE_STOCK',
     payload: http(token).delete(`/stock/delete/${id}`),
   }),
+  deleteAdd: (token, id) => ({
+    type: 'DELETE_ADDSTOCK',
+    payload: http(token).delete(`/stock/deleteAdd/${id}`),
+  }),
   approveStock: (token, no) => ({
     type: 'APPROVE_STOCK',
     payload: http(token).patch('/stock/app', qs.stringify({no: no})),

@@ -826,9 +826,13 @@ class Stock extends Component {
                   >
                     <Image
                       source={
-                        item.pict === undefined || item.pict.length === 0 ?
+                        item.no_asset !== null ?
+                        (item.pict === undefined || item.pict.length === 0 ?
                         placeholder :
-                        { uri: `${API_URL}/${item.pict[item.pict.length - 1].path}` }
+                        { uri: `${API_URL}/${item.pict[item.pict.length - 1].path}` }) :
+                        (!item.image ?
+                        placeholder :
+                        { uri: `${API_URL}/${item.image}` })
                       }
                       style={styles.imageCard}
                     />

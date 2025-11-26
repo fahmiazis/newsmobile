@@ -403,12 +403,18 @@ class CartMutasi extends Component {
   }
 
   prosesDeleteMutasi = async (val) => {
-      const {dataUser, token} = this.props.auth;
-      await this.props.deleteMutasi(token, val.id);
-      await this.props.getCart(token);
-      this.openDelete();
-      this.setState({confirm: 'delete'});
-      this.openConfirm();
+    const {dataUser, token} = this.props.auth;
+    const { page } = this.props.asset;
+    const search =  '';
+    const limit = this.state.limit;
+    await this.props.deleteMutasi(token, val.id);
+    await this.props.getCart(token);
+    await this.props.getAsset(token, limit, search, page.currentPage, 'mutasi');
+    const { dataAsset } = this.props.asset
+    this.setState({assetState: dataAsset});
+    this.openDelete();
+    this.setState({confirm: 'delete'});
+    this.openConfirm();
   }
 
   openSubmit = () => {

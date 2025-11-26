@@ -1334,7 +1334,11 @@ class EksekusiMutasi extends Component {
 
               <View style={styles.formGroupDetail}>
                 <Text style={styles.labelDetail}>Nomor Doc SAP  :</Text>
-                <TextInput style={[styles.inputDetail, styles.backgroundWhite]} value={detailData.doc_sap} onChangeText={(val) => this.setState({detailData: { ...detailData, doc_sap: val }})}/>
+                <TextInput 
+                  style={[styles.inputDetail, styles.backgroundWhite]} 
+                  value={detailData.doc_sap} 
+                  onChangeText={(val) => this.setState({detailData: { ...detailData, doc_sap: val }})}
+                />
                 {(detailData.doc_sap === null || detailData.doc_sap === '') && (
                   <Text style={styles.errorTextDetail}>Must be filled</Text>
                 )}

@@ -275,8 +275,9 @@ class EksekusiDisposal extends Component {
     const { detailData, date_ba } = this.state;
     const data = {
       date_ba: date_ba,
+      doc_sap: detailData.doc_sap,
     };
-    // const data = {
+    // const dataDoc = {
     //     doc_sap: val.doc_sap
     // }
     await this.props.updateDisposal(token, detailData.id, data);
@@ -294,12 +295,12 @@ class EksekusiDisposal extends Component {
     this.setState({modalRinci: !this.state.modalRinci});
   }
 
-  updateNpwp = async (value) => {
+  updateNpwp = async () => {
     const {dataUser, token} = this.props.auth;
-    const data = {
-        npwp: value,
-    };
     const { detailData } = this.state;
+    const data = {
+        npwp: detailData.npwp,
+    };
     await this.props.updateDisposal(token, detailData.id, data);
     await this.props.getDetailDisposal(token, detailData.no_disposal, 'pengajuan');
     const { detailDis } = this.props.disposal;
@@ -404,9 +405,11 @@ class EksekusiDisposal extends Component {
     const cekSap = [];
     const tempdoc = [];
     const arrDoc = [];
+    const cekNo = [];
     for (let i = 0; i < detailDis.length; i++) {
-      // if (detailDis[i].doc_sap === null || detailDis[i].doc_sap === '') {
-      if (detailDis[i].nilai_jual === '0' && (detailDis[i].date_ba === null || detailDis[i].date_ba === '')) {
+      if (detailDis[i].nilai_jual === '0' && (detailDis[i].doc_sap === null || detailDis[i].doc_sap === '')) {
+        cekNo.push(detailDis[i])
+      } else if (detailDis[i].nilai_jual === '0' && (detailDis[i].date_ba === null || detailDis[i].date_ba === '')) {
         cekSap.push(detailDis[i]);
       } else {
         const tipeDis = detailDis[i].nilai_jual === '0' ? 'dispose' : 'sell';
@@ -432,8 +435,10 @@ class EksekusiDisposal extends Component {
         }
       }
     }
-    if (cekSap.length > 0) {
-      // this.setState({confirm: 'falseNodoc'})
+    if (cekNo.length > 0) {
+      this.setState({confirm: 'falseNodoc'});
+      this.openConfirm();
+    } else if (cekSap.length > 0) {
       this.setState({confirm: 'falseDateBa'});
       this.openConfirm();
     } else if (tempdoc.length !== arrDoc.length) {
@@ -1572,23 +1577,35 @@ class EksekusiDisposal extends Component {
                   onChange={(e, date) => this.setEditDate(e, date)}
                 />
               )}
+
+              <View style={styles.formGroupDetail}>
+                <Text style={styles.labelDetail}>Nomor Doc SAP  :</Text>
+                <TextInput 
+                  style={[styles.inputDetail, styles.backgroundWhite]} 
+                  value={detailData.doc_sap} 
+                  onChangeText={(val) => this.setState({detailData: { ...detailData, doc_sap: val }})}
+                />
+                {(detailData.doc_sap === null || detailData.doc_sap === '') && (
+                  <Text style={styles.errorTextDetail}>Must be filled</Text>
+                )}
+              </View>
             </>
           )}
-
           {/* Buttons */}
           <View style={styles.buttonWrapperDetail}>
             {(level === 2 && detailData.nilai_jual === '0') && (
               <TouchableOpacity
                 style={[
                   styles.addButtonDetail,
-                  (detailData.npwp === '' || !detailData.npwp) && { backgroundColor: '#9CA3AF' },
+                  (detailData.doc_sap === '' || !detailData.doc_sap || this.state.date_ba === '') && { backgroundColor: '#9CA3AF' },
                 ]}
-                disabled={(detailData.npwp === '' || !detailData.npwp)}
+                disabled={(detailData.doc_sap === '' || !detailData.doc_sap || this.state.date_ba === '')}
                 onPress={() => this.updateDataDis()}
               >
                 <Text style={styles.addButtonTextDetail}>Save</Text>
               </TouchableOpacity>
             )}
+
             <TouchableOpacity style={styles.closeButtonDetail} onPress={this.openRinci}>
               <Text style={styles.closeButtonTextDetail}>Close</Text>
             </TouchableOpacity>

@@ -97,7 +97,14 @@ class CartStock extends Component {
       onSearch: false,
       noRoute: null,
       isModalOpen: false,
-      isProcessingDetail: false
+      isProcessingDetail: false,
+      stat: '',
+      openAddList: false,
+      modalChoose: false,
+      isModalAdditional: false,
+      openUpload: false,
+      dataId: {},
+      typeAdditional: ''
     };
   }
 
@@ -169,16 +176,16 @@ class CartStock extends Component {
 
     // Deteksi ada params baru dari Scanner
     if (this.props.route.params?.no !== prevProps.route.params?.no) {
-      console.log('hadle parammm di panggil dri did update kinggg')
+      console.log('hadle parammm di panggil dri did update kinggg');
       this.handleParams();
-    } 
+    }
     // else if (isUpload) {
     //     this.props.resetStock();
     //       setTimeout(() => {
     //         this.props.getDetailAsset(token, detailData.id);
     //         this.getDataAsset();
     //       }, 100);
-    // } 
+    // }
     else if (isDocStock === false) {
         this.props.resetStock();
         this.cekStatus('DIPINJAM SEMENTARA');
@@ -190,10 +197,6 @@ class CartStock extends Component {
         this.props.resetError();
         this.props.getDetailAsset(token, detailData.id);
         this.getDataAsset();
-    } else if (isUpdateStock) {
-        this.openConfirm(this.setState({confirm: 'approve'}));
-        this.props.resetStock();
-        this.props.getStockArea(token, '', 1000, 1, 'draft');
     } else if (isSubmit === false) {
         this.props.resetStock();
         this.setState({confirm: 'subReject'});
@@ -213,10 +216,11 @@ class CartStock extends Component {
     //     this.getDataStock()
     //     this.openModalRinci()
     // }
-    else if (isImage) {
-        this.props.getDetailItem(token, dataId);
-        this.props.resetStock();
-    } else if (isApprove) {
+    // else if (isImage) {
+    //     this.props.getDetailItem(token, dataId);
+    //     this.props.resetStock();
+    // } 
+    else if (isApprove) {
         this.openConfirm(this.setState({confirm: 'isApprove'}));
         this.openModalApprove();
         this.props.resetStock();
@@ -237,7 +241,7 @@ class CartStock extends Component {
   }
 
   componentDidMount() {
-    console.log('hadle parammm di panggil dri did mount kinggg')
+    console.log('hadle parammm di panggil dri did mount kinggg');
     this.unsubscribeFocus = this.props.navigation.addListener('focus', () => {
       this.handleParams('mount');
     });
@@ -251,7 +255,7 @@ class CartStock extends Component {
   }
 
   handleParams = async (val) => {
-    console.log('handle param di eksekusi kingggg')
+    console.log('handle param di eksekusi kingggg');
     const { route, navigation } = this.props;
     const { no } = route.params || {};
     const { dataUser } = this.props.auth;
@@ -307,7 +311,7 @@ class CartStock extends Component {
         this.openConfirm();
         return false;
       } else {
-        const statKondisi = detailData.kondisi;
+        const statKondisi = detailData.kondisi === '-' ? null : detailData.kondisi;
         const statFisik = detailData.status_fisik;
         const cek = dataAll.filter((x) =>  x.kondisi === statKondisi && x.fisik === statFisik && x.isSap === type);
         console.log(dataAll);
@@ -330,8 +334,37 @@ class CartStock extends Component {
   }
 
   onStatusChange = (val) => {
-    this.setState({ detailData: { ...this.state.detailData, grouping: val } });
+    if (val === 'DIPINJAM SEMENTARA') {
+      this.openProsesModalDoc();
+    } else {
+      this.setState({ detailData: { ...this.state.detailData, grouping: val } });
+    }
   };
+
+  saveStatus = () => {
+    const {stat} = this.state;
+    this.setState({ detailData: { ...this.state.detailData, grouping: 'DIPINJAM SEMENTARA' } });
+    this.openDokumen();
+  }
+
+  openProsesModalDoc = async () => {
+    const { dataUser, token } = this.props.auth;
+    const { detailData } = this.state;
+    await this.props.getDocument(token, detailData.no_asset);
+    this.openDokumen();
+  }
+
+  cekStatus = async (val) => {
+    const { dataUser, token } = this.props.auth;
+    const { detailData } = this.state;
+    if (val === 'DIPINJAM SEMENTARA') {
+      await this.props.cekDokumen(token, detailData.no_asset);
+    }
+  }
+
+  openDokumen = () => {
+    this.setState({ modalDokumen: !this.state.modalDokumen });
+  }
 
   getDataAsset = async (value) => {
     const { dataUser, token } = this.props.auth;
@@ -368,8 +401,9 @@ class CartStock extends Component {
       merk: detailData.merk,
       satuan: detailData.satuan,
       lokasi: detailData.lokasi,
+      kategori: detailData.kategori,
       status_fisik: detailData.status_fisik,
-      kondisi: detailData.kondisi,
+      kondisi: detailData.kondisi === '-' ? '' : detailData.kondisi,
       grouping: detailData.grouping,
       keterangan: detailData.keterangan,
     };
@@ -458,6 +492,89 @@ class CartStock extends Component {
       const area = asetPart;
       const limit = this.state.limit || 100;
       await this.props.getAssetAll(token, limit, search, page.currentPage, 'asset', area);
+    } catch (err) {
+      if (DocumentPicker.isCancel(err)) {
+        console.log('User cancel');
+      } else {
+        console.error(err);
+      }
+    }
+  };
+
+  uploadImage = async () => {
+    try {
+      const res = await DocumentPicker.pick({
+        type: [DocumentPicker.types.images],
+      });
+
+      if (!res) {
+        console.log('error file tidak ditemukan');
+        return;
+      }
+
+      const {uri, size, type, name} = res;
+      let filePath = uri.replace('file://', '');
+
+      // Ambil info stat dari RNFS
+      let info;
+      try {
+        info = await RNFS.stat(filePath);
+      } catch (err) {
+        console.log('RNFS stat gagal, coba fallback copy:', err);
+        return;
+      }
+
+      const lastModified = info.mtime; // Date object
+      this.setState({fileUpload: res});
+
+      // Validasi size
+      if (size >= 20000000) {
+        this.setState({errMsg: 'Maximum upload size 20 MB'});
+        return;
+      }
+
+      // Validasi type
+      if (type !== 'image/jpeg' && type !== 'image/png') {
+        this.setState({errMsg: 'Invalid file type. Only image files are allowed.'});
+        return;
+      }
+
+      // Hitung selisih hari dari lastModified
+      const date1 = moment(lastModified);
+      const date2 = moment();
+      const diffTime = Math.abs(date2 - date1);
+      const day = 1000 * 60 * 60 * 24;
+      const finDiff = Math.round(diffTime / day);
+      console.log('Selisih hari:', finDiff);
+
+      if (finDiff > 10) {
+        this.setState({confirm: 'oldPict'});
+        this.openConfirm();
+        return;
+      }
+
+      // Upload (pakai FormData)
+      const data = new FormData();
+      data.append('document', {
+        uri,
+        type,
+        name,
+      });
+
+      const {detailData, dataId, typeAdditional} = this.state;
+      const {dataUser, token} = this.props.auth;
+      const finalData = typeAdditional === 'edit' ? detailData : dataId
+
+      await this.props.uploadImage(token, finalData.id, data);
+      await this.props.getDetailItem(token, finalData.id)
+      const { detailAsset } = this.props.stock;
+      this.setState({detailData: detailAsset});
+      if (typeAdditional !== 'edit') {
+        this.setState({confirm: 'add'});
+        this.openConfirm();
+      }
+
+      await this.props.getStockArea(token, '', 1000, 1, 'draft');
     } catch (err) {
       if (DocumentPicker.isCancel(err)) {
         console.log('User cancel');
@@ -580,6 +697,28 @@ class CartStock extends Component {
     this.setState({openList: !this.state.openList});
   }
 
+  prosesOpenAddList = async () => {
+    const {dataUser, token} = this.props.auth;
+    await this.props.getStockArea(token, '', 1000, 1, 'draft');
+    this.openAddList();
+  }
+
+  openAddList = () => {
+    this.setState({openAddList: !this.state.openAddList});
+  }
+
+  prosesOpenAdditional = (val) => {
+      this.setState({
+        detailData: val.type === 'edit' ? val.val : {},
+        typeAdditional: val.type
+      })
+      this.openAdditional()
+  }
+
+  openAdditional = () => {
+    this.setState({isModalAdditional: !this.state.isModalAdditional});
+  }
+
   renderData = ({ item }) => (
     <View style={[styles.assetCard, { width: this.state.openList ? cardWidthList : cardWidth }]}>
       <Image
@@ -617,20 +756,39 @@ class CartStock extends Component {
     </View>
   );
 
-  prosesOpenDokumen = async (val) => {
-    const {dataUser, token} = this.props.auth;
-    this.setState({detailData: val});
-    const data = {
-        noId: val.id,
-        noAsset: val.no_asset,
-    };
-    await this.props.getDocumentStock(token, data, 'stock', 'pengajuan');
-    this.openDokumen();
-  }
-
-  openDokumen = () => {
-    this.setState({ modalDokumen: !this.state.modalDokumen });
-  }
+  renderAdd = ({ item }) => (
+    <View style={[styles.assetCard, { width: cardWidthList }]}>
+      <Image
+        source={
+          !item.image ?
+          placeholder :
+          { uri: `${API_URL}/${item.image}` }
+        }
+        style={styles.imageCard}
+      />
+      <TouchableOpacity style={styles.btnLabel}>
+        <Text style={styles.textLabel}>{item.kategori === null ? '-' : item.kategori}</Text>
+      </TouchableOpacity>
+      <View style={styles.nameContainerCard}>
+        <Text style={styles.nameTextCard} numberOfLines={2}>{item.deskripsi}</Text>
+      </View>
+      <Text style={styles.detailTextCard}>{item.no_asset}</Text>
+      <Text style={styles.detailTextCard}>Kondisi: {item.kondisi}</Text>
+      <Text style={styles.detailTextCard}>Status Fisik: {item.status_fisik}</Text>
+      <Text style={styles.detailTextCard}>Status Aset: {item.grouping}</Text>
+      <View style={styles.footerModal}>
+          <TouchableOpacity style={[styles.buttonModal, styles.btnColorTrack]} onPress={() => this.prosesOpenAdditional({val: item, type: 'edit'})}>
+            <IconAwe  name="edit" size={20} color={'white'} />
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.buttonModal, styles.btnColorReject]} onPress={() => this.prosesOpenDelete(item)} >
+            <IconMateri name="delete" size={20} color={'white'} />
+          </TouchableOpacity>
+        {/* <TouchableOpacity style={[styles.buttonModal, styles.btnColorApprove]} onPress={() => this.prosesOpenDokumen(item)}>
+          <IconAwe name="upload" size={20} color={'white'} />
+        </TouchableOpacity> */}
+      </View>
+    </View>
+  );
 
   prosesOpenDelete = (val) => {
     this.setState({detailData: val});
@@ -739,19 +897,53 @@ class CartStock extends Component {
     }
   }
 
-  addStock = async (value) => {
+  addStock = async (val) => {
     const {dataUser, token} = this.props.auth;
-    const {detailStock} = this.props.stock;
-    const cek = detailStock.find(item => item.nilai_jual !== '0' && item.nilai_jual !== 0);
-    if (cek !== undefined) {
-        this.setState({confirm: 'falseAdd'});
-        this.openConfirm();
-    } else {
-        await this.props.addStock(token, value);
-        this.setState({confirm: 'add'});
-        this.openConfirm();
-        this.getDataAsset();
-    }
+    const dataAsset = this.props.asset.assetAll;
+    const { detailDepo } = this.props.depo;
+    const data = {
+        area: detailDepo.nama_area,
+        kode_plant: dataAsset[0].kode_plant,
+        deskripsi: val.deskripsi,
+        merk: val.merk,
+        satuan: val.satuan,
+        unit: 1,
+        lokasi: val.lokasi,
+        kondisi: val.kondisi,
+        status_fisik: val.status_fisik,
+        grouping: val.grouping,
+        keterangan: val.keterangan,
+    };
+    await this.props.addOpname(token, data);
+    await this.props.getStockArea(token, '', 1000, 1, 'draft');
+    const { dataAdd } = this.props.stock;
+    this.setState({dataId: dataAdd, isModalAdditional: false});
+    this.openModalUpload();
+  }
+
+  updateStock = async (val) => {
+    const {dataUser, token} = this.props.auth;
+    const dataAsset = this.props.asset.assetAll;
+    const { detailDepo } = this.props.depo;
+    const data = {
+        deskripsi: val.deskripsi,
+        merk: val.merk,
+        satuan: val.satuan,
+        unit: 1,
+        lokasi: val.lokasi,
+        kondisi: val.kondisi,
+        status_fisik: val.status_fisik,
+        grouping: val.grouping,
+        keterangan: val.keterangan,
+    };
+    await this.props.updateStock(token, val.id, data);
+    await this.props.getStockArea(token, '', 1000, 1, 'draft');
+    this.setState({confirm: 'update'});
+    this.openConfirm();
+  }
+
+  openModalUpload = () => {
+    this.setState({openUpload: !this.state.openUpload})
   }
 
   prosesUpdateStock = async (val) => {
@@ -770,8 +962,8 @@ class CartStock extends Component {
 
   prosesDeleteStock = async (val) => {
       const {dataUser, token} = this.props.auth;
-      await this.props.deleteStock(token, val.no_asset);
-      await this.props.getCartStock(token);
+      await this.props.deleteAdd(token, val.id);
+      await this.props.getStockArea(token, '', 1000, 1, 'draft');
       this.openDelete();
       this.setState({confirm: 'delete'});
       this.openConfirm();
@@ -848,25 +1040,29 @@ class CartStock extends Component {
           if (finTemp.length > 0) {
             this.setState({crashAsset: finTemp});
             console.log('masuk crash asset');
-            this.openSubmit();
+            this.openChoose();
           } else {
             this.setState({crashAsset: []});
-            this.openSubmit();
+            this.openChoose();
           }
         } else {
             this.setState({crashAsset: []});
             console.log('nggak masuk crash asset2');
-            this.openSubmit();
+            this.openChoose();
         }
     } else {
         this.setState({crashAsset: []});
         console.log('nggak masuk crash asset3');
-        this.openSubmit();
+        this.openChoose();
     }
   }
 
   openSubmit = () => {
-    this.setState({modalSubmit: !this.state.modalSubmit});
+    this.setState({modalSubmit: !this.state.modalSubmit, modalChoose: false});
+  }
+
+  openChoose = () => {
+    this.setState({modalChoose: !this.state.modalChoose});
   }
 
   openReason = () => {
@@ -935,6 +1131,7 @@ class CartStock extends Component {
     await this.props.submitStockFinal(token, data);
     await this.props.sendEmail(token, sendMail);
     await this.props.addNewNotif(token, sendMail);
+    this.setState({openAddList: false})
     if (this.state.crashAsset.length > 0) {
       this.getDataAsset();
       this.openDraftEmail();
@@ -1014,7 +1211,7 @@ class CartStock extends Component {
     const loadingAsset = this.props.asset.isLoading;
     const loadingAll = loadingAsset || loadingDepo || loadingStock || loadingTempmail || loadingNewnotif || loadingDokumen || loading;
 
-    const { dataStock, noStock, dataDoc, detailStock, statusList, dataStatus} = this.props.stock;
+    const { dataStock, noStock, dataDoc, detailStock, statusList, dataStatus, stockArea} = this.props.stock;
     const dataAsset = this.props.asset.assetAll;
     const { dataDepo } = this.props.depo;
 
@@ -1131,25 +1328,6 @@ class CartStock extends Component {
               <Text style={styles.headerTitleModal}>List Stock Opname</Text>
             </View>
 
-            {/* Search */}
-            {/* <View style={styles.searchContainer}>
-              <Ionicons
-                onPress={() => this.onSearch({ target: { value: this.state.search }, key: 'Enter' })}
-                name="search"
-                size={20}
-                color="#999"
-              />
-              <TextInput
-                placeholder="Cari no aset / nama aset..."
-                placeholderTextColor="#999"
-                style={styles.searchInput}
-                onChangeText={this.onType}
-                onSubmitEditing={() => this.onSearch()}
-                value={this.state.search}
-              />
-              <Ionicons name="options-outline" size={20} color="#999" />
-            </View> */}
-
             {/* FlatList langsung */}
             <FlatList
               data={dataAsset}
@@ -1172,6 +1350,60 @@ class CartStock extends Component {
               <TouchableOpacity
                 style={[styles.buttonModal, styles.btnColorClose]}
                 onPress={() => this.openList()}
+              >
+                <Text style={styles.buttonTextModal}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        style={{ margin: 0 }}
+        isVisible={this.state.openAddList}
+        animationIn="slideInUp"
+        animationOut="slideOutDown"
+        onBackdropPress={this.openAddList}
+        useNativeDriver={true}
+      >
+        <View style={styles.overlayModal}>
+          <View style={styles.popupContainerModalList}>
+
+            {/* Header */}
+            <View style={styles.headerContainerModal}>
+              <Text style={styles.headerTitleModal}>Asset Tambahan</Text>
+            </View>
+
+            <View style={styles.dateRow}>
+              <TouchableOpacity
+                style={[styles.dateButton, styles.btnColorApprove]}
+                onPress={() => this.prosesOpenAdditional({type: 'add'})}>
+                <IconAwe style={styles.iconBtn} name="plus" size={15} color={'white'} />
+                <Text style={styles.buttonTextModal}>Add</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* FlatList langsung */}
+            <FlatList
+              data={stockArea}
+              renderItem={this.renderAdd}
+              keyExtractor={(item) => item.id.toString()}
+              numColumns={numColumns}
+              columnWrapperStyle={styles.rowCard}
+              contentContainerStyle={{ padding: 5 }}
+              showsVerticalScrollIndicator={false}
+            />
+
+            {/* Footer */}
+            <View style={styles.footerModal}>
+              <TouchableOpacity
+                style={[styles.buttonModal, styles.btnColorApprove]}
+                onPress={() => this.openSubmit()}
+              >
+                <Text style={styles.buttonTextModal}>Submit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.buttonModal, styles.btnColorClose]}
+                onPress={() => this.openAddList()}
               >
                 <Text style={styles.buttonTextModal}>Close</Text>
               </TouchableOpacity>
@@ -1409,6 +1641,24 @@ class CartStock extends Component {
             </View>
 
             <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>Kategori :</Text>
+              <View style={styles.pickerWrapperDetail}>
+                <Picker
+                  selectedValue={`${detailData.kategori}`}
+                  style={styles.pickerDetail}
+                  onValueChange={(val) => this.setState({detailData: { ...detailData, kategori: val }})}
+                >
+                  <Picker.Item  value="Select" label="Select..."/>
+                  <Picker.Item value={'IT'} label={'IT'} />
+                  <Picker.Item value={'NON IT'} label={'NON IT'} />
+                </Picker>
+              </View>
+              {!detailData.kategori && (
+                <Text style={styles.errorTextDetail}>Must be filled</Text>
+              )}
+            </View>
+
+            <View style={styles.formGroupDetail}>
               <Text style={styles.labelDetail}>Unit :</Text>
               <TextInput style={styles.inputDetail} editable={false} value={detailData.unit} />
             </View>
@@ -1447,17 +1697,17 @@ class CartStock extends Component {
               <Text style={styles.labelDetail}>Kondisi :</Text>
               <View style={styles.pickerWrapperDetail}>
                 <Picker
-                  selectedValue={`${detailData.kondisi}`}
+                  selectedValue={`${detailData.kondisi === '' ? '-' : detailData.kondisi}`}
                   style={styles.pickerDetail}
                   onValueChange={(itemValue) => this.fillStatus(itemValue, 'kondisi')}
                 >
                   <Picker.Item value="Select" label="Select..." />
                   <Picker.Item value={'baik'} label={'Baik'}/>
                   <Picker.Item value={'rusak'} label={'Rusak'}/>
-                  <Picker.Item value={''} label={'-'}/>
+                  <Picker.Item value={'-'} label={'-'}/>
                 </Picker>
               </View>
-              {!detailData.kondisi && (
+              {detailData.kondisi !== '' && detailData.kondisi === null && (
                 <Text style={styles.errorTextDetail}>Must be filled</Text>
               )}
             </View>
@@ -1487,34 +1737,296 @@ class CartStock extends Component {
                 onChangeText={(val) => this.setState({detailData: { ...detailData, keterangan: val }})}
               />
             </View>
+            <View style={styles.footerModal}>
+              {detailData.grouping === 'DIPINJAM SEMENTARA' ? (
+                <TouchableOpacity style={[styles.closeButtonDetail, styles.btnColorProses]} onPress={this.openProsesModalDoc}>
+                  <Text style={styles.closeButtonTextDetail}>Dokumen</Text>
+                </TouchableOpacity>
+              ) : (
+                <View>
+                  <Text>{''}</Text>
+                </View>
+              )}
+              <View style={styles.rowGeneral}>
+                <TouchableOpacity
+                  style={[
+                    styles.addButtonDetail,
+                    (!detailData.merk ||
+                    !detailData.satuan ||
+                    !detailData.lokasi ||
+                    !detailData.status_fisik ||
+                    (detailData.kondisi !== '' && detailData.kondisi === null) ||
+                    !detailData.grouping) && { backgroundColor: '#9CA3AF' },
+                  ]}
+                  disabled={
+                    !detailData.merk ||
+                    !detailData.satuan ||
+                    !detailData.lokasi ||
+                    !detailData.status_fisik ||
+                    (detailData.kondisi !== '' && detailData.kondisi === null) ||
+                    !detailData.grouping
+                  }
+                  onPress={() => this.prosesUpdateAsset(detailData)}
+                >
+                  <Text style={styles.addButtonTextDetail}>{'Save'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.closeButtonDetail} onPress={this.closeModal}>
+                  <Text style={styles.closeButtonTextDetail}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
 
-            {/* Buttons */}
-            <View style={styles.buttonWrapperDetail}>
-              <TouchableOpacity
-                style={[
-                  styles.addButtonDetail,
-                  (!detailData.merk ||
-                  !detailData.satuan ||
-                  !detailData.lokasi ||
-                  !detailData.status_fisik ||
-                  !detailData.kondisi ||
-                  !detailData.grouping) && { backgroundColor: '#9CA3AF' },
-                ]}
-                disabled={
-                  !detailData.merk ||
-                  !detailData.satuan ||
-                  !detailData.lokasi ||
-                  !detailData.status_fisik ||
-                  !detailData.kondisi ||
-                  !detailData.grouping
+      <Modal
+        isVisible={this.state.isModalAdditional}
+        onBackdropPress={this.openAdditional}
+        style={styles.modalWrapperDetail}
+      >
+        <View style={styles.modalContainerDetail}>
+          <ScrollView>
+            {/* Header */}
+            <Text style={styles.headerTextDetail}>{this.state.typeAdditional === 'edit' ? "Update Data Asset" : 'Tambah Data Asset'}</Text>
+
+            {this.state.typeAdditional === 'edit' && (
+              <View style={styles.imageWrapperDetail}>
+                <Image
+                  source={
+                    detailData.image === undefined ?
+                    placeholder :
+                    { uri: `${API_URL}/${detailData.image}` }
+                  }
+                  style={styles.imageDetail}
+                />
+                <View style={[styles.dateRow, { marginTop: 10 }]}>
+                  <TouchableOpacity
+                    style={[styles.dateButton, styles.btnColorProses]}
+                    onPress={() => this.uploadImage()}
+                    >
+                    <IconAwe style={styles.iconBtn} name="camera" size={15} color={'white'} />
+                    <Text style={styles.buttonTextModal}>Upload Picture</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            {/* Form */}
+            <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>Deskripsi :</Text>
+              <TextInput
+                style={styles.inputDetailAct}
+                value={detailData.deskripsi}
+                onChangeText={(val) => this.setState({detailData: { ...detailData, deskripsi: val }})}
+              />
+              {!detailData.deskripsi && (
+                <Text style={styles.errorTextDetail}>Must be filled</Text>
+              )}
+            </View>
+
+            <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>Merk / Type :</Text>
+              <TextInput
+                style={styles.inputDetailAct}
+                value={detailData.merk}
+                onChangeText={(val) => this.setState({detailData: { ...detailData, merk: val }})}
+              />
+              {!detailData.merk && (
+                <Text style={styles.errorTextDetail}>Must be filled</Text>
+              )}
+            </View>
+
+            <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>Satuan :</Text>
+              <View style={styles.pickerWrapperDetail}>
+                <Picker
+                  selectedValue={`${detailData.satuan}`}
+                  style={styles.pickerDetail}
+                  onValueChange={(val) => this.setState({detailData: { ...detailData, satuan: val }})}
+                >
+                  <Picker.Item  value="Select" label="Select..."/>
+                  <Picker.Item value={'Unit'} label={'UNIT'} />
+                  <Picker.Item value={'Paket'} label={'PAKET'} />
+                </Picker>
+              </View>
+              {!detailData.satuan && (
+                <Text style={styles.errorTextDetail}>Must be filled</Text>
+              )}
+            </View>
+
+            <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>Unit :</Text>
+              <TextInput style={styles.inputDetail} editable={false} value='1' />
+            </View>
+
+            <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>Lokasi :</Text>
+              <TextInput
+              style={styles.inputDetailAct}
+              value={detailData.lokasi}
+              onChangeText={(val) => this.setState({detailData: { ...detailData, lokasi: val }})}
+              />
+              {!detailData.lokasi && (
+                <Text style={styles.errorTextDetail}>Must be filled</Text>
+              )}
+            </View>
+
+            <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>Status Fisik :</Text>
+              <View style={styles.pickerWrapperDetail}>
+                <Picker
+                  selectedValue={`${detailData.status_fisik}`}
+                  style={styles.pickerDetail}
+                  onValueChange={(itemValue) => this.fillStatus(itemValue, 'status_fisik')}
+                >
+                  <Picker.Item value="Select" label="Select..."/>
+                  <Picker.Item value={'ada'} label={'Ada'}/>
+                  {/* <Picker.Item value={'tidak ada'} label={'Tidak Ada'}/> */}
+                </Picker>
+              </View>
+              {!detailData.status_fisik && (
+                <Text style={styles.errorTextDetail}>Must be filled</Text>
+              )}
+            </View>
+
+            <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>Kondisi :</Text>
+              <View style={styles.pickerWrapperDetail}>
+                <Picker
+                  selectedValue={`${detailData.kondisi === '' ? '-' : detailData.kondisi}`}
+                  style={styles.pickerDetail}
+                  onValueChange={(itemValue) => this.fillStatus(itemValue, 'kondisi')}
+                >
+                  <Picker.Item value="Select" label="Select..." />
+                  <Picker.Item value={'baik'} label={'Baik'}/>
+                  {/* <Picker.Item value={'rusak'} label={'Rusak'}/>
+                  <Picker.Item value={'-'} label={'-'}/> */}
+                </Picker>
+              </View>
+              {detailData.kondisi !== '' && detailData.kondisi === null && (
+                <Text style={styles.errorTextDetail}>Must be filled</Text>
+              )}
+            </View>
+
+            <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>Status Aset :</Text>
+              <View style={[styles.pickerWrapperDetail]}>
+                <CustomPicker
+                  items={listStatus}
+                  value={detailData.grouping}
+                  onValueChange={this.onStatusChange}
+                  onBeforeOpen={() => this.getDataStatus('true')}
+                  placeholder={detailData.grouping ? detailData.grouping : 'Select status...'}
+                  modalTitle="Pilih Status Aset"
+                />
+              </View>
+              {!detailData.grouping && (
+                <Text style={styles.errorTextDetail}>Must be filled</Text>
+              )}
+            </View>
+
+            <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>Keterangan :</Text>
+              <TextInput
+                style={styles.inputDetailAct}
+                value={detailData.keterangan}
+                onChangeText={(val) => this.setState({detailData: { ...detailData, keterangan: val }})}
+              />
+            </View>
+            <View style={styles.footerModal}>
+              {detailData.grouping === 'DIPINJAM SEMENTARA' ? (
+                <TouchableOpacity style={[styles.closeButtonDetail, styles.btnColorProses]} onPress={this.openProsesModalDoc}>
+                  <Text style={styles.closeButtonTextDetail}>Dokumen</Text>
+                </TouchableOpacity>
+              ) : (
+                <View>
+                  <Text>{''}</Text>
+                </View>
+              )}
+              <View style={styles.rowGeneral}>
+                <TouchableOpacity
+                  style={[
+                    styles.addButtonDetail,
+                    (!detailData.merk ||
+                    !detailData.deskripsi ||
+                    !detailData.satuan ||
+                    !detailData.lokasi ||
+                    !detailData.status_fisik ||
+                    (detailData.kondisi !== '' && detailData.kondisi === null) ||
+                    !detailData.grouping) && { backgroundColor: '#9CA3AF' },
+                  ]}
+                  disabled={
+                    !detailData.merk ||
+                    !detailData.deskripsi ||
+                    !detailData.satuan ||
+                    !detailData.lokasi ||
+                    !detailData.status_fisik ||
+                    (detailData.kondisi !== '' && detailData.kondisi === null) ||
+                    !detailData.grouping
+                  }
+                  onPress={
+                    () => this.state.typeAdditional === 'edit' ? 
+                    this.updateStock(detailData) : 
+                    this.addStock(detailData)
+                  }
+                >
+                  <Text style={styles.addButtonTextDetail}>{'Save'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.closeButtonDetail} onPress={this.openAdditional}>
+                  <Text style={styles.closeButtonTextDetail}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
+
+      <Modal
+        isVisible={this.state.openUpload}
+        onBackdropPress={this.openModalUpload}
+        style={styles.modalWrapperDetail}
+      >
+        <View style={styles.modalContainerDetail}>
+          <ScrollView>
+            {/* Header */}
+            <Text style={styles.headerTextDetail}>Dokumentasi Tambahan Asset</Text>
+            <Text style={styles.assetNameTextDetail}>{detailData.deskripsi}</Text>
+
+            {/* Image */}
+            <View style={styles.imageWrapperDetail}>
+              <Image
+                source={
+                  detailData.img === undefined || detailData.img.length === 0 ?
+                  placeholder :
+                  { uri: `${API_URL}/${detailData.img[detailData.img.length - 1].path}` }
                 }
-                onPress={() => this.prosesUpdateAsset(detailData)}
-              >
-                <Text style={styles.addButtonTextDetail}>{'Save'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.closeButtonDetail} onPress={this.closeModal}>
-                <Text style={styles.closeButtonTextDetail}>Close</Text>
-              </TouchableOpacity>
+                style={styles.imageDetail}
+              />
+              <View style={[styles.dateRow, { marginTop: 10 }]}>
+                <TouchableOpacity
+                  style={[styles.dateButton, styles.btnColorProses]}
+                  onPress={() => this.uploadImage()}
+                  >
+                  <IconAwe style={styles.iconBtn} name="camera" size={15} color={'white'} />
+                  <Text style={styles.buttonTextModal}>Upload Picture</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.footerModal}>
+              <View>
+                <Text>{''}</Text>
+              </View>
+              <View style={styles.rowGeneral}>
+                <TouchableOpacity
+                  style={[styles.addButtonDetail]}
+                  onPress={() => this.openModalUpload()}
+                >
+                  <Text style={styles.addButtonTextDetail}>Save</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.closeButtonDetail} onPress={this.openModalUpload}>
+                  <Text style={styles.closeButtonTextDetail}>Close</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </ScrollView>
         </View>
@@ -1597,7 +2109,7 @@ class CartStock extends Component {
                 ) : this.state.confirm === 'delete' ? (
                   <View style={styles.sectionInfo}>
                     <IconMateri name="check-circle" color={'green'} size={50}/>
-                    <Text style={styles.sectionTitleInfo}>Berhasil Delete Item</Text>
+                    <Text style={styles.sectionTitleInfo}>Berhasil Delete</Text>
                     <TouchableOpacity style={styles.btnInfo} onPress={this.openConfirm}>
                       <Text style={styles.textBtnInfo}>OK</Text>
                     </TouchableOpacity>
@@ -1692,6 +2204,33 @@ class CartStock extends Component {
                     <Text style={styles.buttonTextCard}>Ya</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.buttonDelete, styles.btnColorSec]} onPress={this.openDelete}>
+                    <Text style={styles.buttonTextCard}>Tidak</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        style={{margin: 0}}
+        isVisible={this.state.modalChoose}
+        animationIn="slideInUp"
+        animationOut="slideOutDown"
+        // backdropOpacity={0.4}
+        onBackdropPress={this.openChoose}
+        useNativeDriver={true}
+      >
+        <View style={styles.overlayModal}>
+          <View style={styles.popupContainerInfo}>
+            <ScrollView style={styles.scrollContentModal}>
+              <View style={styles.sectionInfo}>
+                <Text style={styles.sectionTitleInfo}>Apakah anda ingin menambah data asset yang lain?</Text>
+                <View style={styles.sectionDelete}>
+                  <TouchableOpacity style={[styles.buttonDelete, styles.btnColorClose]} onPress={() => this.prosesOpenAddList()}>
+                    <Text style={styles.buttonTextCard}>Ya</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.buttonDelete, styles.btnColorSec]} onPress={this.openSubmit}>
                     <Text style={styles.buttonTextCard}>Tidak</Text>
                   </TouchableOpacity>
                 </View>
@@ -1823,10 +2362,10 @@ class CartStock extends Component {
                 arrDoc: dataDoc,
                 proses: 'upload',
                 detailForm: detailData,
-                noDoc: detailData.id,
+                noDoc: detailData.no_asset,
                 noTrans: null,
                 tipe: 'stock'}}
-              handleClose={this.openDokumen} />
+              handleClose={dataDoc.find(x => x.path === null) !== undefined ? this.openDokumen : this.saveStatus} />
             </ScrollView>
           </View>
         </View>
@@ -2138,6 +2677,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: 10,
+  },
+  rowGeneral: {
+    flexDirection: 'row',
   },
   buttonModal: {
     paddingVertical: 10,
@@ -2576,6 +3118,7 @@ const mapStockpatchToProps = {
     addOpname: stock.addStock,
     uploadImage: stock.uploadImage,
     submitAsset: stock.submitAsset,
+    deleteAdd: stock.deleteAdd,
     addNewNotif: newnotif.addNewNotif,
     getDraftEmail: tempmail.getDraftEmail,
     sendEmail: tempmail.sendEmail,

@@ -78,6 +78,7 @@ class Pengadaan extends Component {
       total: 0,
       detailData: {},
       openFill: false,
+      stateTemp: [],
     };
   }
 
@@ -225,7 +226,7 @@ class Pengadaan extends Component {
     await this.props.getApproveIo(token, detail.no_pengadaan);
     await this.props.getDetail(token, detail.no_pengadaan);
     await this.props.getTempAsset(token, detail.no_pengadaan);
-    const {dataApp, detailIo} = this.props.pengadaan;
+    const {dataApp, detailIo, dataTemp} = this.props.pengadaan;
     const realApp = dataApp.pembuat !== undefined ? Object.values(dataApp) : [];
     let num = 0;
     for (let i = 0; i < detailIo.length; i++) {
@@ -261,7 +262,7 @@ class Pengadaan extends Component {
       }
       finalApp.push(tempApp);
     }
-    this.setState({realApp: finalApp.reverse()});
+    this.setState({realApp: finalApp.reverse(), stateTemp: dataTemp});
     this.setState({loading: false});
   }
 
@@ -677,6 +678,8 @@ class Pengadaan extends Component {
     const {dataUser, token} = this.props.auth;
     const { detailIo } = this.props.pengadaan;
     await this.props.getTempAsset(token, detailIo[0].no_pengadaan);
+    const {dataTemp} = this.props.pengadaan;
+    this.setState({stateTemp: dataTemp});
     this.openFill();
   }
 
@@ -684,17 +687,31 @@ class Pengadaan extends Component {
     this.setState({openFill: !this.state.openFill});
   }
 
+  updateFillAsset = async (val) => {
+    const {dataUser, token} = this.props.auth;
+    const data = {
+        no_asset: val.no_asset,
+    };
+    await this.props.updateTemp(token, val.id, data);
+    await this.props.getTempAsset(token, val.no_pengadaan);
+    await this.props.getDetail(token, val.no_pengadaan);
+    const { dataTemp } = this.props.pengadaan;
+    this.setState({confirm: 'update', stateTemp: dataTemp});
+    this.openConfirm();
+  }
+
   generateSap = async (val) => {
     const {dataUser, token} = this.props.auth;
     await this.props.generateAssetSap(token, val.no_pengadaan);
     await this.props.getTempAsset(token, val.no_pengadaan);
     await this.props.getDetail(token, val.no_pengadaan);
-    this.setState({confirm: 'update'});
+    const { dataTemp } = this.props.pengadaan;
+    this.setState({confirm: 'update', stateTemp: dataTemp});
     this.openConfirm();
   }
 
   render() {
-    const {time1, time2, showDateFrom, showDateTo, filter, newIo, openDetail, loading, realApp, listMut, listStat, tipeEmail, dataRej, total} = this.state;
+    const {time1, time2, showDateFrom, showDateTo, filter, newIo, stateTemp, loading, realApp, listMut, listStat, tipeEmail, dataRej, total} = this.state;
 
     const loadingDepo = this.props.depo.isLoading;
     const loadingPengadaan = this.props.pengadaan.isLoading;
@@ -952,7 +969,7 @@ class Pengadaan extends Component {
                 <View style={styles.assetCardModal}>
                   <Text>{detailIo.length > 0 && detailIo[0].no_io !== null ? detailIo[0].no_io : '-'}</Text>
                 </View>
-                {(level === 8) && filter === 'available' ? (
+                {/* {(level === 8) && filter === 'available' ? (
                   <TouchableOpacity
                     style={[styles.buttonDoc, styles.btnColorApprove]}
                     onPress={() => this.updateNomorIo({val: detailIo[0], type: 'sap'})}
@@ -964,7 +981,7 @@ class Pengadaan extends Component {
                   </TouchableOpacity>
                 ) : (
                   null
-                )}
+                )} */}
               </View>
 
               {/* Daftar Asset */}
@@ -1221,7 +1238,7 @@ class Pengadaan extends Component {
             <ScrollView style={styles.scrollContentModal}>
               {/* Daftar Asset */}
               <Text style={styles.sectionTitleModal}>Filling Nomor Asset</Text>
-              {dataTemp.length > 0 && dataTemp.map((item, index) => (
+              {stateTemp.length > 0 && stateTemp.map((item, index) => (
                 <View key={index} style={[styles.assetCardModal, item.status_app === 0 ? styles.note : listMut.find(element => element === item.id) !== undefined ? styles.note : styles.backgroundWhite]}>
                   <TouchableOpacity>
                     <View style={styles.assetRowModal}>
@@ -1261,22 +1278,35 @@ class Pengadaan extends Component {
                     <TextInput
                       style={styles.inputDetail}
                       value={item.no_asset}
-                      editable={false}
-                      onChangeText={(val) => this.setState({nama: val})}
+                      onChangeText={(val) =>
+                        this.setState(prev => ({
+                          stateTemp: prev.stateTemp.map(
+                            x => x.id === item.id ? { ...x, no_asset: val } : x
+                          )
+                        }))
+                      }
                     />
                   </View>
+                  <TouchableOpacity
+                    style={[styles.buttonModal, styles.btnColorProses]}
+                    onPress={() => this.updateFillAsset(item)}
+                  >
+                    <Text style={styles.buttonTextModal}>
+                      Update Nomor Asset
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               ))}
-              <View style={styles.footerModal}>
+              {/* <View style={styles.footerModal}>
                 <TouchableOpacity
                   style={[styles.buttonModal, styles.btnColorProses]}
-                  onPress={() => this.generateSap(dataTemp[0])}
+                  onPress={() => this.generateSap(stateTemp[0])}
                 >
                   <Text style={styles.buttonTextModal}>
                     Generate By SAP
                   </Text>
                 </TouchableOpacity>
-              </View>
+              </View> */}
             </ScrollView>
             <View style={styles.footerModal}>
               <TouchableOpacity

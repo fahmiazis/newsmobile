@@ -300,7 +300,7 @@ class BudgetMutasi extends Component {
     for (let i = 0; i < detailMut.length; i++) {
         const item = detailMut[i];
         if (item.isbudget === 'ya' && (item.cost_centerawal === null || item.cost_centerawal === '')) {
-
+          cekData.push(item)
         }
     }
     if (cekData.length > 0) {
