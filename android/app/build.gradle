@@ -138,8 +138,8 @@ android {
         // applicationId "com.news"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "2.0"
+        versionCode 2
+        versionName "2.0.0"
         missingDimensionStrategy 'react-native-camera', 'general'
         multiDexEnabled true
         ndk {
