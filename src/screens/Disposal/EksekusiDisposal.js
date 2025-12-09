@@ -287,7 +287,7 @@ class EksekusiDisposal extends Component {
   }
 
   prosesOpenRinci = (val) => {
-    this.setState({detailData: val});
+    this.setState({detailData: val, date_ba: val.date_ba});
     this.openRinci();
   }
 
@@ -377,19 +377,19 @@ class EksekusiDisposal extends Component {
     this.openDokumen();
   }
 
-  openDocEksekusi = async () => {
+  openDocEksekusi = async (val) => {
     const {dataUser, token} = this.props.auth;
-    const { detailData } = this.state;
-    if (detailData.npwp !== 'ada' &&  detailData.npwp !== 'tidak' && detailData.nilai_jual !== '0') {
+    this.setState({detailData: val})
+    if (val.npwp !== 'ada' &&  val.npwp !== 'tidak' && val.nilai_jual !== '0') {
       this.setState({confirm: 'falseNpwp'});
       this.openConfirm();
     } else {
-      const tipeDis = detailData.nilai_jual === '0' ? 'dispose' : 'sell';
+      const tipeDis = val.nilai_jual === '0' ? 'dispose' : 'sell';
       const data = {
-        noId: detailData.id,
-        noAsset: detailData.no_asset,
+        noId: val.id,
+        noAsset: val.no_asset,
       };
-      await this.props.getDocumentDis(token, data, 'disposal', tipeDis, detailData.npwp);
+      await this.props.getDocumentDis(token, data, 'disposal', tipeDis, val.npwp);
       this.openDokumen();
     }
   }
@@ -944,7 +944,7 @@ class EksekusiDisposal extends Component {
                       <Text style={[styles.assetValueModal, { marginVertical: 10 }]}>{item.keterangan}</Text>
                     </View>
                   </TouchableOpacity>
-                  {(filter === 'available' && detailData.nilai_jual === '0') && (
+                  {(filter === 'available' && item.nilai_jual === '0') && (
                   <TouchableOpacity
                     style={[styles.buttonDoc, styles.btnColorApprove, { marginBottom: 10 }]}
                     onPress={() => this.prosesOpenRinci(item)}
@@ -956,7 +956,7 @@ class EksekusiDisposal extends Component {
                   )}
                   <TouchableOpacity
                     style={[styles.buttonDoc, styles.btnColorProses]}
-                    onPress={() => this.prosesOpenDokumen(item)}
+                    onPress={() => this.openDocEksekusi(item)}
                   >
                     <Text style={styles.buttonTextModal}>
                       Dokumen
@@ -1031,11 +1031,11 @@ class EksekusiDisposal extends Component {
               </View>
 
               <View style={styles.footerModal}>
-                {filter === 'available' ? (
+                {filter === 'available' && (
                   <>
                     <TouchableOpacity
                       style={[styles.buttonModal, styles.btnColorApprove]}
-                      onPress={() => this.cekApprove()}
+                      onPress={() => this.cekSubmit()}
                     >
                       <Text style={styles.buttonTextModal}>
                         Submit
@@ -1049,15 +1049,6 @@ class EksekusiDisposal extends Component {
                       <Text style={styles.buttonTextModal}>Reject</Text>
                     </TouchableOpacity>
                   </>
-                ) : filter === 'submit' && (
-                  <TouchableOpacity
-                    style={[styles.buttonModal, styles.btnColorApprove]}
-                    onPress={() => this.cekSubmit()}
-                  >
-                    <Text style={styles.buttonTextModal}>
-                      Submit
-                    </Text>
-                  </TouchableOpacity>
                 )}
               </View>
 
@@ -1247,6 +1238,15 @@ class EksekusiDisposal extends Component {
                       <Text style={styles.textBtnInfo}>OK</Text>
                     </TouchableOpacity>
                   </View>
+                ) : (this.state.confirm === 'falseNodoc') ? (
+                  <View style={styles.sectionInfo}>
+                    <IconMateri name="close" color={'red'} size={50}/>
+                    <Text style={styles.sectionTitleInfo}>Gagal Submit</Text>
+                    <Text style={[styles.sectioSubtitleInfo]}>Pastikan nomor document SAP telah diinput</Text>
+                    <TouchableOpacity style={styles.btnInfo} onPress={this.openConfirm}>
+                      <Text style={styles.textBtnInfo}>OK</Text>
+                    </TouchableOpacity>
+                  </View>
                 ) : (
                   null
                 )
@@ -1274,33 +1274,6 @@ class EksekusiDisposal extends Component {
                     <Text style={styles.buttonTextCard}>Ya</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.buttonDelete, styles.btnColorSec]} onPress={this.openSubmit}>
-                    <Text style={styles.buttonTextCard}>Tidak</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-      <Modal
-        style={{margin: 0}}
-        isVisible={this.state.modalApprove}
-        animationIn="slideInUp"
-        animationOut="slideOutDown"
-        // backdropOpacity={0.4}
-        onBackdropPress={this.openApprove}
-        useNativeDriver={true}
-      >
-        <View style={styles.overlayModal}>
-          <View style={styles.popupContainerInfo}>
-            <ScrollView style={styles.scrollContentModal}>
-              <View style={styles.sectionInfo}>
-                <Text style={styles.sectionTitleInfo}>Apakah anda yakin untuk approve?</Text>
-                <View style={styles.sectionDelete}>
-                  <TouchableOpacity style={[styles.buttonDelete, styles.btnColorClose]} onPress={() => this.prepSendEmail('approve')} >
-                    <Text style={styles.buttonTextCard}>Ya</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.buttonDelete, styles.btnColorSec]} onPress={this.openApprove}>
                     <Text style={styles.buttonTextCard}>Tidak</Text>
                   </TouchableOpacity>
                 </View>
@@ -1461,7 +1434,7 @@ class EksekusiDisposal extends Component {
               parDoc={{
                 arrDoc: dataDoc,
                 proses: filter === 'available' ? 'approval' : filter === 'submit' ? 'upload' : 'show',
-                tipe: filter === 'submit' ? 'eksekusi disposal' : 'disposal',
+                tipe: filter === 'available' ? 'eksekusi disposal' : 'disposal',
                 noDoc:  detailDis.length > 0 ? detailDis[0].id : '',
                 noTrans: detailDis.length > 0 ? detailDis[0].no_disposal : '',
                 detailForm: this.state.detailData,

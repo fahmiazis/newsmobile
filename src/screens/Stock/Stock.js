@@ -4,13 +4,14 @@ import React, {Component} from 'react';
 import {
   View, Text, ScrollView,
   TextInput, TouchableOpacity, RefreshControl,
-  StyleSheet, Platform, Image,
-  Button, Dimensions,
+  StyleSheet, Platform, Image, FlatList,
+  Button, Dimensions, Pressable,
 } from 'react-native';
 import {Radio, Label} from 'native-base';
 import { RNCamera } from 'react-native-camera';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import IconAwe from 'react-native-vector-icons/FontAwesome5';
+import IconAwe from 'react-native-vector-icons/FontAwesome';
+import IconAwe5 from 'react-native-vector-icons/FontAwesome5';
 import IconMateri from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -85,6 +86,7 @@ class Stock extends Component {
       reason: '',
       total: 0,
       detailData: {},
+      openData: false
     };
   }
 
@@ -312,6 +314,17 @@ class Stock extends Component {
       this.changeFilter(filter);
   }
 
+  prosesOpenData = async (val) => {
+    this.setState({
+      detailData: val,
+      openData: true, // kontrol render modal
+    });
+  };
+
+  openData = () => {
+    this.setState({openData: !this.state.openData});
+  }
+
   prosesOpenDetail = async (val) => {
     const {dataUser, token} = this.props.auth;
     const level = dataUser.user_level.toString();
@@ -401,6 +414,13 @@ class Stock extends Component {
 
   openConfirm = () => {
     this.setState({modalConfirm: !this.state.modalConfirm});
+  }
+
+  openProsesModalDoc = async (val) => {
+    const { dataUser, token } = this.props.auth;
+    this.setState({detailData: val})
+    await this.props.getDocument(token, val.no_asset, val.id);
+    this.openDokumen();
   }
 
   openDokumen = () => {
@@ -517,7 +537,7 @@ class Stock extends Component {
     const { detailStock } = this.props.stock;
     await this.props.submitAsset(token, detailStock[0].no_stock);
     this.prosesSendEmail('asset');
-    this.setState({confirm: 'submit'})
+    this.setState({confirm: 'submit'});
     this.openConfirm();
     this.openSubmit();
     this.getDataStock();
@@ -553,8 +573,109 @@ class Stock extends Component {
     this.openDraftEmail();
   }
 
+
+  renderData = ({ item }) => {
+    const imageSource = item.no_asset !== null
+      ? (item.pict === undefined || item.pict.length === 0
+          ? placeholder
+          : { uri: `${API_URL}/${item.pict[item.pict.length - 1].path}` })
+      : (!item.image
+          ? placeholder
+          : { uri: `${API_URL}/${item.image}` });
+
+    return (
+      <Pressable
+        disabled={item.status_app === 0}
+        onPress={
+          this.state.listMut.find(element => element === item.id) === undefined
+            ? () => this.chekApp(item.id)
+            : () => this.chekRej(item.id)
+        }
+        style={({ pressed }) => [
+          styles.assetCard,
+          {
+            flex: 1, // Gunakan flex 1 untuk auto width
+            maxWidth: '48%', // Max 48% untuk spacing
+            opacity: pressed ? 0.7 : 1, // Manual opacity control
+          },
+          item.status_app === 0
+            ? styles.note
+            : this.state.listMut.find(element => element === item.id) !== undefined
+            ? styles.note
+            : styles.normal,
+        ]}
+      >
+        <Image
+          source={imageSource}
+          style={styles.imageCard}
+          defaultSource={placeholder}
+          resizeMode="contain"
+          fadeDuration={300}
+          onError={(error) => {
+            console.log('Image error for item:', item.id, error.nativeEvent?.error);
+          }}
+        />
+
+        <View style={styles.nameContainerCard}>
+          <Text style={styles.nameTextCard} numberOfLines={2}>
+            {item.deskripsi || '-'}
+          </Text>
+        </View>
+
+        <Text style={styles.detailTextCard} numberOfLines={1}>
+          {item.no_asset || '-'}
+        </Text>
+        <Text style={styles.detailTextCard} numberOfLines={1}>
+          Kondisi: {item.kondisi || '-'}
+        </Text>
+        <Text style={styles.detailTextCard} numberOfLines={1}>
+          Status Fisik: {item.status_fisik || '-'}
+        </Text>
+        <Text style={styles.detailTextCard} numberOfLines={1}>
+          Status Aset: {item.grouping || '-'}
+        </Text>
+
+        {/* Button tetap pakai TouchableOpacity tersendiri */}
+        {/* <View style={styles.footerModal}>
+          <TouchableOpacity
+            style={styles.buttonCard}
+            activeOpacity={0.7}
+            onPress={(e) => {
+              e.stopPropagation(); // Prevent parent onPress
+              // Handle button action
+            }}
+          >
+            <Text style={styles.buttonTextCard}>Detail</Text>
+          </TouchableOpacity>
+          {item.grouping === 'DIPINJAM SEMENTARA' && (
+            <TouchableOpacity
+              style={styles.buttonCard}
+              activeOpacity={0.7}
+              onPress={(e) => {
+                e.stopPropagation(); // Prevent parent onPress
+                // Handle button action
+              }}
+            >
+              <Text style={styles.buttonTextCard}>Dokumen BA</Text>
+            </TouchableOpacity>
+          )}
+        </View> */}
+        <View style={styles.footerModal}>
+          <TouchableOpacity style={[styles.buttonDetail, styles.btnColorProses]} onPress={() => this.prosesOpenData(item)}>
+            <IconAwe5 name="eye" size={20} color={'white'} />
+          </TouchableOpacity>
+          {item.grouping === 'DIPINJAM SEMENTARA' && (
+            <TouchableOpacity style={[styles.buttonDetail, styles.btnColorTrack]} onPress={() => this.openProsesModalDoc(item)} >
+              <IconAwe name="file-text" size={20} color={'white'} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </Pressable>
+    );
+  }
+
   render() {
-    const {time1, time2, showDateFrom, showDateTo, filter, newStock, openDetail, loading, realApp, listMut, listStat, tipeEmail, dataRej} = this.state;
+    const {time1, time2, showDateFrom, showDateTo, filter, newStock, detailData, loading, realApp, listMut, listStat, tipeEmail, dataRej} = this.state;
 
     const loadingDepo = this.props.depo.isLoading;
     const loadingStock = this.props.stock.isLoading;
@@ -614,7 +735,7 @@ class Stock extends Component {
               // onPress={() => this.props.navigation.navigate('StockTab', {screen: 'CartStock'})}
               onPress={() => this.props.navigation.navigate('CartStock')}
               >
-                <IconAwe name="plus" size={20} color={'green'} />
+                <IconAwe5 name="plus" size={20} color={'green'} />
               </TouchableOpacity>
             )}
           </View>
@@ -794,61 +915,63 @@ class Stock extends Component {
         isVisible={this.state.openDetail}
         animationIn="slideInUp"
         animationOut="slideOutDown"
-        // backdropOpacity={0.4}
         onBackdropPress={this.openDetail}
         useNativeDriver={true}
       >
         <View style={styles.overlayModal}>
           <View style={styles.popupContainerModal}>
-            <ScrollView style={styles.scrollContentModal}>
+            <ScrollView
+              style={styles.scrollContentModal}
+              nestedScrollEnabled={true} // PENTING: Enable nested scroll
+            >
               {/* Header */}
               <View style={styles.headerContainerModal}>
                 <Text style={styles.headerTitleModal}>Detail Stock Asset</Text>
-                <Text style={styles.headerSubModal}>{detailStock.length > 0 ? detailStock[0].no_stock : ''}</Text>
+                <Text style={styles.headerSubModal}>
+                  {detailStock.length > 0 ? detailStock[0].no_stock : ''}
+                </Text>
               </View>
 
               {/* Info Utama */}
               <View style={styles.infoCardModal}>
-                <Text style={styles.infoTextModal}>Tanggal Form: {detailStock.length > 0 ? moment(detailStock[0].tanggalStock).format('DD MMMM YYYY') : '-'}</Text>
-                <Text style={styles.infoTextModal}>Cabang/Depo: {detailStock.length > 0 ? detailStock[0].area : ''}</Text>
-                <Text style={styles.infoTextModal}>Cost Center: {detailStock.length > 0 ? detailStock[0].depo.cost_center : ''}</Text>
+                <Text style={styles.infoTextModal}>
+                  Tanggal Form: {detailStock.length > 0 ? moment(detailStock[0].tanggalStock).format('DD MMMM YYYY') : '-'}
+                </Text>
+                <Text style={styles.infoTextModal}>
+                  Cabang/Depo: {detailStock.length > 0 ? detailStock[0].area : ''}
+                </Text>
+                <Text style={styles.infoTextModal}>
+                  Cost Center: {detailStock.length > 0 ? detailStock[0].depo.cost_center : ''}
+                </Text>
               </View>
 
               {/* Daftar Asset */}
               <Text style={styles.sectionTitleModal}>Daftar Asset</Text>
-              <View style={styles.rowCard}>
-                {detailStock.length > 0 && detailStock.map((item, index) => (
-                  <TouchableOpacity
-                  key={index}
-                    style={[styles.assetCard, { width: cardWidthList }, item.status_app === 0 ? styles.note : listMut.find(element => element === item.id) !== undefined ? styles.note : styles.backgroundWhite]}
-                    disabled={item.status_app === 0 ? true : false}
-                    onPress={listMut.find(element => element === item.id) === undefined ? () => this.chekApp(item.id) : () => this.chekRej(item.id)}
-                  >
-                    <Image
-                      source={
-                        item.no_asset !== null ?
-                        (item.pict === undefined || item.pict.length === 0 ?
-                        placeholder :
-                        { uri: `${API_URL}/${item.pict[item.pict.length - 1].path}` }) :
-                        (!item.image ?
-                        placeholder :
-                        { uri: `${API_URL}/${item.image}` })
-                      }
-                      style={styles.imageCard}
-                    />
-                    {/* <TouchableOpacity style={styles.btnLabel}>
-                      <Text style={styles.textLabel}>{item.kategori === null ? '-' : item.kategori}</Text>
-                    </TouchableOpacity> */}
-                    <View style={styles.nameContainerCard}>
-                      <Text style={styles.nameTextCard} numberOfLines={2}>{item.deskripsi}</Text>
-                    </View>
-                    <Text style={styles.detailTextCard}>{item.no_asset}</Text>
-                    <Text style={styles.detailTextCard}>Kondisi: {item.kondisi}</Text>
-                    <Text style={styles.detailTextCard}>Status Fisik: {item.status_fisik}</Text>
-                    <Text style={styles.detailTextCard}>Status Aset: {item.grouping}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              {/* FlatList dengan scrollEnabled={false} agar parent ScrollView yang handle scroll */}
+              {detailStock.length > 0 && (
+                <FlatList
+                  data={detailStock}
+                  renderItem={this.renderData}
+                  keyExtractor={(item) => item.id.toString()}
+                  numColumns={2}
+                  key={'2columns'}
+                  scrollEnabled={false} // PENTING: Disable scroll FlatList
+                  nestedScrollEnabled={true}
+                  columnWrapperStyle={{
+                    justifyContent: 'space-between',
+                    paddingHorizontal: 10,
+                    marginBottom: 10,
+                  }}
+                  contentContainerStyle={{
+                    paddingTop: 5,
+                    paddingBottom: 5,
+                  }}
+                  removeClippedSubviews={true}
+                  maxToRenderPerBatch={10}
+                  windowSize={10}
+                  initialNumToRender={10}
+                />
+              )}
 
               {/* Matrix Otorisasi */}
               <View style={styles.sectionModal}>
@@ -878,7 +1001,9 @@ class Stock extends Component {
                       />
                     </View>
                     <View style={styles.timelineContent}>
-                      <Text style={styles.statusTitle}>{titleApprovals.find(x => x.val === section[0].sebagai)?.display}</Text>
+                      <Text style={styles.statusTitle}>
+                        {titleApprovals.find(x => x.val === section[0].sebagai)?.display}
+                      </Text>
                       <View
                         style={
                           [styles.detailBox,
@@ -893,7 +1018,9 @@ class Stock extends Component {
                       >
                         {section.map((item, i) => (
                           <View key={i} style={styles.detailRow}>
-                            <Text style={styles.detailDate}>{item.status !== null ? moment(item.updatedAt).format('DD MMMM YYYY') : '-'}</Text>
+                            <Text style={styles.detailDate}>
+                              {item.status !== null ? moment(item.updatedAt).format('DD MMMM YYYY') : '-'}
+                            </Text>
                             <Text style={styles.detailName}>
                               {item.status !== null ? item.nama : '-'} {item.status === 0 ? '(Reject)' : item.status === 1 ? '(Approve)' : ''}
                             </Text>
@@ -906,14 +1033,7 @@ class Stock extends Component {
                 ))}
               </View>
 
-              <View style={styles.sectionModal}>
-                {/* <Text style={styles.smallTextModal}>
-                  Area ke Area: Dibuat AOS, Diperiksa BM, ROM, GAAM, Disetujui Head Ops
-                </Text>
-                <Text style={styles.smallTextModal}>
-                  HO ke Area: Dibuat GA SPV, Diperiksa BM, Disetujui Head Ops Excellence
-                </Text> */}
-              </View>
+              <View style={styles.sectionModal} />
 
               <View style={styles.footerModal}>
                 {filter === 'available' && (
@@ -923,7 +1043,6 @@ class Stock extends Component {
                       onPress={() => (level === 2 || level === 8) ? this.openSubmit() : this.openApprove()}
                     >
                       <Text style={styles.buttonTextModal}>
-                        {/* {level === 5 || level === 9 ? 'Scan' : 'Approve'} */}
                         {(level === 2 || level === 8) ? 'Submit' : 'Approve'}
                       </Text>
                     </TouchableOpacity>
@@ -940,16 +1059,8 @@ class Stock extends Component {
 
             </ScrollView>
 
-            {/* Tombol */}
+            {/* Tombol Close */}
             <View style={styles.footerModal}>
-              {/* {filter === 'available' && (
-                <TouchableOpacity
-                  style={[styles.buttonModal, styles.btnColorProses]}
-                  onPress={() => this.openModalScan()}
-                >
-                  <Text style={styles.buttonTextModal}>Scan</Text>
-                </TouchableOpacity>
-              )} */}
               <TouchableOpacity
                 style={[styles.buttonModal, styles.btnColorClose]}
                 onPress={() => this.openDetail()}
@@ -960,6 +1071,137 @@ class Stock extends Component {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        isVisible={this.state.openData}
+        onBackdropPress={this.openData}
+        style={styles.modalWrapperDetail}
+      >
+        <View style={styles.modalContainerDetail}>
+          <ScrollView>
+            {/* Header */}
+            <Text style={styles.headerTextDetail}>Detail Data Asset</Text>
+
+              <View style={styles.imageWrapperDetail}>
+                <Image
+                  source={
+                    detailData.no_asset !== null
+                    ? (detailData.pict === undefined || detailData.pict.length === 0
+                        ? placeholder
+                        : { uri: `${API_URL}/${detailData.pict[detailData.pict.length - 1].path}` })
+                    : (!detailData.image
+                        ? placeholder
+                        : { uri: `${API_URL}/${detailData.image}` })
+                  }
+                  style={styles.imageDetail}
+                />
+                {/* <View style={[styles.dateRow, { marginTop: 10 }]}>
+                  <TouchableOpacity
+                    style={[styles.dateButton, styles.btnColorProses]}
+                    onPress={() => this.uploadImage()}
+                    >
+                    <IconAwe style={styles.iconBtn} name="camera" size={15} color={'white'} />
+                    <Text style={styles.buttonTextModal}>Upload Picture</Text>
+                  </TouchableOpacity>
+                </View> */}
+              </View>
+            {/* Form */}
+            <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>Deskripsi :</Text>
+              <TextInput
+                style={styles.inputDetailAct}
+                value={detailData.deskripsi}
+                editable={false}
+              />
+            </View>
+
+            <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>Merk / Type :</Text>
+              <TextInput
+                style={styles.inputDetailAct}
+                value={detailData.merk}
+                editable={false}
+              />
+            </View>
+
+            <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>Satuan :</Text>
+              <TextInput
+              style={styles.inputDetailAct}
+              value={detailData.satuan}
+              editable={false}
+              />
+            </View>
+
+            <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>Unit :</Text>
+              <TextInput style={styles.inputDetail} editable={false} value="1" />
+            </View>
+
+            <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>Lokasi :</Text>
+              <TextInput
+              style={styles.inputDetailAct}
+              value={detailData.lokasi}
+              editable={false}
+              />
+            </View>
+
+            <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>Status Fisik :</Text>
+              <TextInput
+                style={styles.inputDetailAct}
+                value={detailData.status_fisik}
+                editable={false}
+              />
+            </View>
+
+            <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>Kondisi :</Text>
+              <TextInput
+                style={styles.inputDetailAct}
+                value={detailData.kondisi}
+                editable={false}
+              />
+            </View>
+
+            <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>Status Asset :</Text>
+              <TextInput
+                style={styles.inputDetailAct}
+                value={detailData.grouping}
+                editable={false}
+              />
+            </View>
+
+            <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>Keterangan :</Text>
+              <TextInput
+                style={styles.inputDetailAct}
+                value={detailData.keterangan}
+                onChangeText={(val) => this.setState({detailData: { ...detailData, keterangan: val }})}
+              />
+            </View>
+            <View style={styles.footerModal}>
+              {detailData.grouping === 'DIPINJAM SEMENTARA' ? (
+                <TouchableOpacity style={[styles.closeButtonDetail, styles.btnColorProses]} onPress={() => this.openProsesModalDoc(detailData)}>
+                  <Text style={styles.closeButtonTextDetail}>Dokumen</Text>
+                </TouchableOpacity>
+              ) : (
+                <View>
+                  <Text>{''}</Text>
+                </View>
+              )}
+              <View style={styles.rowGeneral}>
+                <TouchableOpacity style={styles.closeButtonDetail} onPress={this.openData}>
+                  <Text style={styles.closeButtonTextDetail}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
+
       <Modal
         isVisible={this.state.modalScan}
         style={{ margin: 0 }}
@@ -986,7 +1228,7 @@ class Stock extends Component {
           <View style={styles.popupContainerInfo}>
             <ScrollView style={styles.scrollContentModal}>
               <View style={styles.sectionInfo}>
-                <IconAwe name="spinner" size={50}/>
+                <IconAwe5 name="spinner" size={50}/>
                 <Text style={styles.sectionTitleInfo}>Waiting.....</Text>
               </View>
             </ScrollView>
@@ -1024,11 +1266,11 @@ class Stock extends Component {
               <ModalDokumen
               parDoc={{
                 arrDoc: dataDoc,
-                proses: 'approval',
-                tipe: 'pengadaan',
-                noDoc: detailStock.length > 0 ? (detailStock[0].asset_token === null ? detailStock[0].id : detailStock[0].no_pengadaan) : '',
-                noTrans: detailStock.length > 0 ? detailStock[0].no_pengadaan : '',
-                detailForm: this.state.detailData,
+                proses: 'upload',
+                detailForm: detailData,
+                noDoc: detailData.no_asset,
+                noTrans: null,
+                tipe: 'stock'
               }}
               handleClose={this.openDokumen}
               />
@@ -1635,6 +1877,9 @@ const styles = StyleSheet.create({
   btnColorApprove: {
     backgroundColor: '#28a745',
   },
+  btnColorTrack: {
+    backgroundColor: '#FFC107',
+  },
   btnColorSec: {
     backgroundColor: '#6B7280',
   },
@@ -1876,6 +2121,130 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     marginRight: 10,
     justifyContent: 'center',
+  },
+  buttonDetail: {
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+
+   // Modal Detail
+  containerDetail: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  openButtonDetail: {
+    backgroundColor: '#EF4444',
+    padding: 12,
+    borderRadius: 8,
+  },
+  modalWrapperDetail: {
+    justifyContent: 'center',
+    margin: 0,
+  },
+  modalContainerDetail: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 20,
+    width: screenWidth * 0.9,
+    alignSelf: 'center',
+  },
+  headerTextDetail: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  assetNameTextDetail: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 20,
+  },
+  imageWrapperDetail: {
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  imageDetail: {
+    width: '100%',
+    height: 260,
+    resizeMode: 'contain',
+    borderRadius: 8,
+    // borderWidth: 1,
+    // borderColor: '#E5E7EB',
+  },
+  formGroupDetail: {
+    marginBottom: 15,
+  },
+  labelDetail: {
+    fontSize: 14,
+    color: '#374151',
+    marginBottom: 5,
+  },
+  inputDetail: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    padding: 10,
+    backgroundColor: '#9CA3AF',
+    color: '#111827',
+  },
+  inputDetailAct: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    padding: 10,
+    backgroundColor: '#fdfbfbff',
+    color: '#111827',
+  },
+  checkboxWrapperDetail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  checkboxDetail: {
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 6,
+    marginRight: 10,
+  },
+  checkboxActiveDetail: {
+    backgroundColor: '#E5E7EB',
+  },
+  pickerWrapperDetail: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+  },
+  pickerDetail: {
+    height: 40,
+  },
+  buttonWrapperDetail: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 20,
+  },
+  addButtonDetail: {
+    backgroundColor: '#10B981',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginRight: 10,
+  },
+  addButtonTextDetail: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  closeButtonDetail: {
+    backgroundColor: '#6B7280',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  closeButtonTextDetail: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });
 

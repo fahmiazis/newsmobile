@@ -104,7 +104,7 @@ class CartStock extends Component {
       isModalAdditional: false,
       openUpload: false,
       dataId: {},
-      typeAdditional: ''
+      typeAdditional: '',
     };
   }
 
@@ -219,7 +219,7 @@ class CartStock extends Component {
     // else if (isImage) {
     //     this.props.getDetailItem(token, dataId);
     //     this.props.resetStock();
-    // } 
+    // }
     else if (isApprove) {
         this.openConfirm(this.setState({confirm: 'isApprove'}));
         this.openModalApprove();
@@ -563,10 +563,10 @@ class CartStock extends Component {
 
       const {detailData, dataId, typeAdditional} = this.state;
       const {dataUser, token} = this.props.auth;
-      const finalData = typeAdditional === 'edit' ? detailData : dataId
+      const finalData = typeAdditional === 'edit' ? detailData : dataId;
 
       await this.props.uploadImage(token, finalData.id, data);
-      await this.props.getDetailItem(token, finalData.id)
+      await this.props.getDetailItem(token, finalData.id);
       const { detailAsset } = this.props.stock;
       this.setState({detailData: detailAsset});
       if (typeAdditional !== 'edit') {
@@ -710,9 +710,9 @@ class CartStock extends Component {
   prosesOpenAdditional = (val) => {
       this.setState({
         detailData: val.type === 'edit' ? val.val : {},
-        typeAdditional: val.type
-      })
-      this.openAdditional()
+        typeAdditional: val.type,
+      });
+      this.openAdditional();
   }
 
   openAdditional = () => {
@@ -824,14 +824,14 @@ class CartStock extends Component {
       typeModal: val.type,
       keterangan,
       noRoute: null,
-      isModalVisible: true, // kontrol render modal
+      isModalVisible: true,
     });
   };
 
   closeModal = () => {
     this.setState({
       isModalVisible: false,
-      isProcessingDetail: false, // reset flag supaya scan berikutnya bisa buka modal
+      isProcessingDetail: false,
     });
   };
 
@@ -943,7 +943,7 @@ class CartStock extends Component {
   }
 
   openModalUpload = () => {
-    this.setState({openUpload: !this.state.openUpload})
+    this.setState({openUpload: !this.state.openUpload});
   }
 
   prosesUpdateStock = async (val) => {
@@ -1131,7 +1131,7 @@ class CartStock extends Component {
     await this.props.submitStockFinal(token, data);
     await this.props.sendEmail(token, sendMail);
     await this.props.addNewNotif(token, sendMail);
-    this.setState({openAddList: false})
+    this.setState({openAddList: false});
     if (this.state.crashAsset.length > 0) {
       this.getDataAsset();
       this.openDraftEmail();
@@ -1787,7 +1787,7 @@ class CartStock extends Component {
         <View style={styles.modalContainerDetail}>
           <ScrollView>
             {/* Header */}
-            <Text style={styles.headerTextDetail}>{this.state.typeAdditional === 'edit' ? "Update Data Asset" : 'Tambah Data Asset'}</Text>
+            <Text style={styles.headerTextDetail}>{this.state.typeAdditional === 'edit' ? 'Update Data Asset' : 'Tambah Data Asset'}</Text>
 
             {this.state.typeAdditional === 'edit' && (
               <View style={styles.imageWrapperDetail}>
@@ -1855,7 +1855,7 @@ class CartStock extends Component {
 
             <View style={styles.formGroupDetail}>
               <Text style={styles.labelDetail}>Unit :</Text>
-              <TextInput style={styles.inputDetail} editable={false} value='1' />
+              <TextInput style={styles.inputDetail} editable={false} value="1" />
             </View>
 
             <View style={styles.formGroupDetail}>
@@ -1914,7 +1914,7 @@ class CartStock extends Component {
                   items={listStatus}
                   value={detailData.grouping}
                   onValueChange={this.onStatusChange}
-                  onBeforeOpen={() => this.getDataStatus('true')}
+                  onBeforeOpen={() => this.getDataStatus('false')}
                   placeholder={detailData.grouping ? detailData.grouping : 'Select status...'}
                   modalTitle="Pilih Status Aset"
                 />
@@ -1964,8 +1964,8 @@ class CartStock extends Component {
                     !detailData.grouping
                   }
                   onPress={
-                    () => this.state.typeAdditional === 'edit' ? 
-                    this.updateStock(detailData) : 
+                    () => this.state.typeAdditional === 'edit' ?
+                    this.updateStock(detailData) :
                     this.addStock(detailData)
                   }
                 >
@@ -2364,7 +2364,8 @@ class CartStock extends Component {
                 detailForm: detailData,
                 noDoc: detailData.no_asset,
                 noTrans: null,
-                tipe: 'stock'}}
+                tipe: 'stock'
+              }}
               handleClose={dataDoc.find(x => x.path === null) !== undefined ? this.openDokumen : this.saveStatus} />
             </ScrollView>
           </View>

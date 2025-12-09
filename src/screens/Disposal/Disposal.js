@@ -1606,8 +1606,9 @@ class Disposal extends Component {
             <TouchableOpacity
               style={[
                 styles.addButtonDetail,
-                (detailData.npwp === '' || !detailData.npwp) && { backgroundColor: '#9CA3AF' },
+                (detailData.nilai_jual !== '0') && (detailData.npwp === '' || !detailData.npwp) && { backgroundColor: '#9CA3AF' },
               ]}
+              disabled={(detailData.nilai_jual !== '0') && (detailData.npwp === '' || !detailData.npwp)}
               onPress={() => this.openDocEksekusi()}
             >
               <Text style={styles.addButtonTextDetail}>Upload Dokumen</Text>

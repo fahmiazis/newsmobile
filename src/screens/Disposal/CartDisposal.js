@@ -267,7 +267,7 @@ class CartDisposal extends Component {
       <Text style={styles.detailTextCard}>Nilai Buku: {item.nilai_buku}</Text>
       {this.state.openList ? (
         <Text style={styles.detailTextCard}>
-          Status: {item.status === '1' ? 'On Proses Disposal' : item.status === '11' ? 'On Proses Disposal' : 'available'}
+          Status: {parseInt(item.status) === 1 ? 'On Proses Disposal' : parseInt(item.status) === 11 ? 'On Proses Mutasi' : 'available'}
         </Text>
       ) : (
         <Text style={styles.detailTextCard}>
@@ -275,7 +275,7 @@ class CartDisposal extends Component {
         </Text>
       )}
       {this.state.openList ? (
-        item.status === '1' || item.status === '11' ? (
+        parseInt(item.status) === 1 || parseInt(item.status) === 11 ? (
           <View style={styles.footerModal}></View>
         ) : (
           <View style={styles.footerModal}>
