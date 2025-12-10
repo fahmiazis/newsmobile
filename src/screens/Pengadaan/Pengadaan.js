@@ -1128,6 +1128,7 @@ class Pengadaan extends Component {
                   <TextInput
                     value={this.state.noIo}
                     placeholder='-'
+                    editable={(level === 8) && filter === 'available' ? true : false}
                     onChangeText={val => this.setState({noIo: val})}
                   />
                 </View>

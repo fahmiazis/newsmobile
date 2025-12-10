@@ -359,7 +359,7 @@ class CartDisposal extends Component {
                 await this.props.addDisposal(token, detailData.no_asset, kode);
                 await this.props.getAsset(token, limit, search, page.currentPage, 'disposal');
                 await this.props.getCartDisposal(token);
-                const { dataAsset } = this.props.asset
+                const { dataAsset } = this.props.asset;
                 this.setState({assetState: dataAsset});
                 this.toggleModal();
                 this.setState({confirm: 'add'});
@@ -434,12 +434,16 @@ class CartDisposal extends Component {
   }
 
   prosesDeleteDisposal = async (val) => {
-      const {dataUser, token} = this.props.auth;
-      await this.props.deleteDisposal(token, val.no_asset);
-      await this.props.getCartDisposal(token);
-      this.openDelete();
-      this.setState({confirm: 'delete'});
-      this.openConfirm();
+    const {dataUser, token} = this.props.auth;
+    const { page } = this.props.asset;
+    const search =  '';
+    const limit = this.state.limit;
+    await this.props.deleteDisposal(token, val.no_asset);
+    await this.props.getCartDisposal(token);
+    this.getDataAsset();
+    this.openDelete();
+    this.setState({confirm: 'delete'});
+    this.openConfirm();
   }
 
   cekSubmit = async () => {
