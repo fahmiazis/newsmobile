@@ -278,6 +278,7 @@ class CartPengadaan extends Component {
     const level = dataUser.user_level.toString();
     const {dataCart} = this.props.pengadaan;
     const cek = [];
+    const cekName = [];
     const {nama, price, qty, kategori, tipe, jenis, akta, start, end, noAjuan} = this.state;
     const data = {
       nama: nama,
@@ -292,13 +293,19 @@ class CartPengadaan extends Component {
       no_ref: kategori === 'return' ? noAjuan : '',
     };
     for (let i = 0; i < dataCart.length; i++) {
-        if (dataCart[i].kategori !== data.kategori || dataCart[i].tipe !== data.tipe) {
-            cek.push(1);
+        if (dataCart[i].kategori !== data.kategori || dataCart[i].tipe !== data.tipe || dataCart[i].jenis !== data.jenis) {
+          cek.push(1);
+        } else if (dataCart[i].nama.toLowerCase() === data.nama.toLowerCase()) {
+          cekName.push(dataCart[i]);
         }
     }
+
     if (cek.length > 0) {
         this.setState({confirm: 'falseAdd'});
         this.openConfirm();
+    } else if (cekName.length > 0) {
+      this.setState({confirm: 'falseNameAdd'});
+      this.openConfirm();
     } else {
         await this.props.addCart(token, data);
         this.getDataCart();
@@ -311,6 +318,7 @@ class CartPengadaan extends Component {
     const {dataCart} = this.props.pengadaan;
     const {detailData} = this.state;
     const cek = [];
+    const cekName = [];
     const {nama, price, qty, kategori, tipe, jenis, akta, start, end, noAjuan} = this.state;
     const data = {
       nama: nama,
@@ -325,20 +333,26 @@ class CartPengadaan extends Component {
       no_ref: kategori === 'return' ? noAjuan : '',
     };
     for (let i = 0; i < dataCart.length; i++) {
-        if ((dataCart[i].kategori !== data.kategori || dataCart[i].tipe !== data.tipe) && dataCart.length > 1) {
-            cek.push(1);
-        }
+      if ((dataCart[i].kategori !== data.kategori || dataCart[i].tipe !== data.tipe || dataCart[i].jenis !== data.jenis) && dataCart.length > 1) {
+        cek.push(1);
+      } else if (dataCart[i].nama.toLowerCase() === data.nama.toLowerCase()) {
+        cekName.push(dataCart[i]);
+      }
     }
+
     if (cek.length > 0) {
-        this.setState({confirm: 'falseUpdate'});
-        this.openConfirm();
+      this.setState({confirm: 'falseUpdate'});
+      this.openConfirm();
+    } else if (cekName.length > 0) {
+      this.setState({confirm: 'falseNameUpdate'});
+      this.openConfirm();
     } else {
-        await this.props.updateCart(token, detailData.id, data);
-        await this.props.getDocCart(token, detailData.id);
-        this.getDataCart();
-        this.toggleModal();
-        this.setState({confirm: 'update'});
-        this.openConfirm();
+      await this.props.updateCart(token, detailData.id, data);
+      await this.props.getDocCart(token, detailData.id);
+      this.getDataCart();
+      this.toggleModal();
+      this.setState({confirm: 'update'});
+      this.openConfirm();
     }
   }
 
@@ -1007,7 +1021,16 @@ class CartPengadaan extends Component {
                   <View style={styles.sectionInfo}>
                     <IconMateri name="close" color={'red'} size={50}/>
                     <Text style={styles.sectionTitleInfo}>Gagal {this.state.confirm === 'falseUpdate' ? 'Megupdate' : 'Menambahkan'} Item</Text>
-                    <Text style={[styles.sectioSubtitleInfo]}>Pastikan kategori dan tipe sama di setiap item</Text>
+                    <Text style={[styles.sectioSubtitleInfo]}>Pastikan kategori, tipe, dan jenis sama di setiap item</Text>
+                    <TouchableOpacity style={styles.btnInfo} onPress={this.openConfirm}>
+                      <Text style={styles.textBtnInfo}>OK</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (this.state.confirm === 'falseNameAdd' || this.state.confirm === 'falseNameUpdate') ? (
+                  <View style={styles.sectionInfo}>
+                    <IconMateri name="close" color={'red'} size={50}/>
+                    <Text style={styles.sectionTitleInfo}>Gagal {this.state.confirm === 'falseUpdate' ? 'Megupdate' : 'Menambahkan'} Item</Text>
+                    <Text style={[styles.sectioSubtitleInfo]}>Nama item sudah terdaftar, silahkan update quantity di item yg sudah terdaftar</Text>
                     <TouchableOpacity style={styles.btnInfo} onPress={this.openConfirm}>
                       <Text style={styles.textBtnInfo}>OK</Text>
                     </TouchableOpacity>
@@ -1212,12 +1235,12 @@ class CartPengadaan extends Component {
             <ScrollView style={styles.scrollContentModal}>
               <ModalDokumen
               parDoc={{
-                arrDoc: dataDocCart, 
-                proses: 'upload', 
-                noDoc: detailData.id, 
-                noTrans: null, 
+                arrDoc: dataDocCart,
+                proses: 'upload',
+                noDoc: detailData.id,
+                noTrans: null,
                 tipe: 'pengadaan',
-                detailForm: this.state.detailData
+                detailForm: this.state.detailData,
               }}
               handleClose={this.openDokumen} />
             </ScrollView>

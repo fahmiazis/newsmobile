@@ -105,7 +105,17 @@ class CartStock extends Component {
       openUpload: false,
       dataId: {},
       typeAdditional: '',
+      cameraOn: false,
+      cameraReady: false,
     };
+  }
+
+  openCamera = (source) => {
+    this.setState({
+      cameraOn: !this.state.cameraOn,
+      cameraSource: source, // 'asset' atau 'item'
+      cameraReady: false,
+    });
   }
 
   getMessage = (val) => {
@@ -419,7 +429,100 @@ class CartStock extends Component {
     await this.props.getAssetAll(token, limit, search, page.currentPage, 'asset', area);
   }
 
-  uploadPicture = async () => {
+  takeFromCamera = async () => {
+    if (!this.camera || !this.state.cameraReady) {
+      Alert.alert('Error', 'Kamera belum siap');
+      return;
+    }
+
+    try {
+      const photo = await this.camera.takePictureAsync({
+        quality: 0.8,
+        base64: false,
+        pauseAfterCapture: false,
+      });
+
+      // Tutup kamera dulu
+      this.setState({cameraOn: false});
+
+      // Buat FormData untuk upload
+      const data = new FormData();
+      data.append('document', {
+        uri: photo.uri,
+        type: 'image/jpeg',
+        name: `camera_${Date.now()}.jpg`,
+      });
+
+      const {detailData} = this.state;
+      const {token} = this.props.auth;
+
+      // Upload pakai uploadPicture
+      await this.props.uploadPicture(token, detailData.no_asset, data);
+      await this.props.getDetailAsset(token, detailData.id);
+      const { detailAsset } = this.props.asset;
+      this.setState({detailData: detailAsset});
+      const { page } = this.props.asset;
+      const { asetPart, search } = this.state;
+
+      const area = asetPart;
+      const limit = this.state.limit || 100;
+      await this.props.getAssetAll(token, limit, search, page.currentPage, 'asset', area);
+
+      Alert.alert('Success', 'Foto berhasil diupload');
+    } catch (error) {
+      console.error('Take photo error:', error);
+      Alert.alert('Error', 'Gagal mengambil foto');
+    }
+  };
+
+  takeFromCameraItem = async () => {
+    if (!this.camera || !this.state.cameraReady) {
+      Alert.alert('Error', 'Kamera belum siap');
+      return;
+    }
+
+    try {
+      const photo = await this.camera.takePictureAsync({
+        quality: 0.8,
+        base64: false,
+        pauseAfterCapture: false,
+      });
+
+      // Tutup kamera dulu
+      this.setState({cameraOn: false});
+
+      // Buat FormData untuk upload
+      const data = new FormData();
+      data.append('document', {
+        uri: photo.uri,
+        type: 'image/jpeg',
+        name: `camera_${Date.now()}.jpg`,
+      });
+
+      const {detailData, dataId, typeAdditional} = this.state;
+      const {token} = this.props.auth;
+      const finalData = typeAdditional === 'edit' ? detailData : dataId;
+
+      // Upload pakai uploadImage
+      await this.props.uploadImage(token, finalData.id, data);
+      await this.props.getDetailItem(token, finalData.id);
+      const { detailAsset } = this.props.stock;
+      this.setState({detailData: detailAsset});
+      if (typeAdditional !== 'edit') {
+        this.setState({confirm: 'add'});
+        this.openConfirm();
+      }
+
+      await this.props.getStockArea(token, '', 1000, 1, 'draft');
+
+      Alert.alert('Success', 'Foto berhasil diupload');
+    } catch (error) {
+      console.error('Take photo error:', error);
+      Alert.alert('Error', 'Gagal mengambil foto');
+    }
+  };
+
+  uploadPictureOld = async () => {
     try {
       const res = await DocumentPicker.pick({
         type: [DocumentPicker.types.images],
@@ -501,7 +604,7 @@ class CartStock extends Component {
     }
   };
 
-  uploadImage = async () => {
+  uploadImageOld = async () => {
     try {
       const res = await DocumentPicker.pick({
         type: [DocumentPicker.types.images],
@@ -575,6 +678,127 @@ class CartStock extends Component {
       }
 
       await this.props.getStockArea(token, '', 1000, 1, 'draft');
+    } catch (err) {
+      if (DocumentPicker.isCancel(err)) {
+        console.log('User cancel');
+      } else {
+        console.error(err);
+      }
+    }
+  };
+
+  uploadPicture = async () => {
+    try {
+      const res = await DocumentPicker.pick({
+        type: [DocumentPicker.types.images],
+      });
+
+      if (!res) {
+        console.log('error file tidak ditemukan');
+        return;
+      }
+
+      const {uri, size, type, name} = res;
+      this.setState({fileUpload: res});
+
+      // Validasi size (20 MB)
+      if (size >= 20000000) {
+        this.setState({errMsg: 'Maximum upload size 20 MB'});
+        Alert.alert('Error', 'Ukuran file maksimal 20 MB');
+        return;
+      }
+
+      // Validasi type
+      if (type !== 'image/jpeg' && type !== 'image/png') {
+        this.setState({errMsg: 'Invalid file type. Only image files are allowed.'});
+        Alert.alert('Error', 'Hanya file JPEG atau PNG yang diperbolehkan');
+        return;
+      }
+
+      // Upload (pakai FormData)
+      const data = new FormData();
+      data.append('document', {
+        uri,
+        type,
+        name,
+      });
+
+      const {detailData} = this.state;
+      const {token} = this.props.auth;
+
+      await this.props.uploadPicture(token, detailData.no_asset, data);
+      await this.props.getDetailAsset(token, detailData.id);
+      const { detailAsset } = this.props.asset;
+      this.setState({detailData: detailAsset});
+      const { page } = this.props.asset;
+      const { asetPart, search } = this.state;
+
+      const area = asetPart;
+      const limit = this.state.limit || 100;
+      await this.props.getAssetAll(token, limit, search, page.currentPage, 'asset', area);
+
+      Alert.alert('Success', 'Foto berhasil diupload');
+    } catch (err) {
+      if (DocumentPicker.isCancel(err)) {
+        console.log('User cancel');
+      } else {
+        console.error(err);
+      }
+    }
+  };
+
+  uploadImage = async () => {
+    try {
+      const res = await DocumentPicker.pick({
+        type: [DocumentPicker.types.images],
+      });
+
+      if (!res) {
+        console.log('error file tidak ditemukan');
+        return;
+      }
+
+      const {uri, size, type, name} = res;
+      this.setState({fileUpload: res});
+
+      // Validasi size (20 MB)
+      if (size >= 20000000) {
+        this.setState({errMsg: 'Maximum upload size 20 MB'});
+        Alert.alert('Error', 'Ukuran file maksimal 20 MB');
+        return;
+      }
+
+      // Validasi type
+      if (type !== 'image/jpeg' && type !== 'image/png') {
+        this.setState({errMsg: 'Invalid file type. Only image files are allowed.'});
+        Alert.alert('Error', 'Hanya file JPEG atau PNG yang diperbolehkan');
+        return;
+      }
+
+      // Upload (pakai FormData)
+      const data = new FormData();
+      data.append('document', {
+        uri,
+        type,
+        name,
+      });
+
+      const {detailData, dataId, typeAdditional} = this.state;
+      const {token} = this.props.auth;
+      const finalData = typeAdditional === 'edit' ? detailData : dataId;
+
+      await this.props.uploadImage(token, finalData.id, data);
+      await this.props.getDetailItem(token, finalData.id);
+      const { detailAsset } = this.props.stock;
+      this.setState({detailData: detailAsset});
+      if (typeAdditional !== 'edit') {
+        this.setState({confirm: 'add'});
+        this.openConfirm();
+      }
+
+      await this.props.getStockArea(token, '', 1000, 1, 'draft');
+
+      Alert.alert('Success', 'Foto berhasil diupload');
     } catch (err) {
       if (DocumentPicker.isCancel(err)) {
         console.log('User cancel');
@@ -1573,6 +1797,45 @@ class CartStock extends Component {
       </Modal>
 
       <Modal
+        visible={this.state.cameraOn}
+        animationType="slide"
+        onRequestClose={() => this.setState({cameraOn: false})}
+      >
+        <View style={styles.cameraWrapper}>
+          <RNCamera
+            ref={ref => (this.camera = ref)}
+            style={styles.camera}
+            captureAudio={false}
+            type={RNCamera.Constants.Type.back}
+            flashMode={RNCamera.Constants.FlashMode.auto}
+            onCameraReady={() => this.setState({ cameraReady: true })}
+          />
+
+          {/* Overlay tombol */}
+          <View style={styles.cameraControls}>
+            <TouchableOpacity
+              style={styles.cameraBtnCapture}
+              onPress={
+                this.state.cameraSource === 'asset'
+                  ? this.takeFromCamera
+                  : this.takeFromCameraItem
+              }
+              disabled={!this.state.cameraReady}
+            >
+              <IconAwe name="camera" size={40} color="white" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.cameraBtnClose}
+              onPress={() => this.setState({cameraOn: false})}
+            >
+              <IconAwe name="close" size={30} color="white" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
         isVisible={this.state.isModalVisible}
         onBackdropPress={this.closeModal}
         style={styles.modalWrapperDetail}
@@ -1595,10 +1858,17 @@ class CartStock extends Component {
               />
               <View style={[styles.dateRow, { marginTop: 10 }]}>
                 <TouchableOpacity
+                  style={[styles.dateButton, styles.btnColorTrack]}
+                  onPress={() => this.openCamera('asset')}
+                >
+                  <IconAwe style={styles.iconBtn} name="camera" size={15} color={'white'} />
+                  <Text style={styles.buttonTextModal}>Take Picture</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
                   style={[styles.dateButton, styles.btnColorProses]}
                   onPress={() => this.uploadPicture()}
                   >
-                  <IconAwe style={styles.iconBtn} name="camera" size={15} color={'white'} />
+                  <IconAwe style={styles.iconBtn} name="upload" size={15} color={'white'} />
                   <Text style={styles.buttonTextModal}>Upload Picture</Text>
                 </TouchableOpacity>
               </View>
@@ -1800,13 +2070,22 @@ class CartStock extends Component {
                   style={styles.imageDetail}
                 />
                 <View style={[styles.dateRow, { marginTop: 10 }]}>
-                  <TouchableOpacity
-                    style={[styles.dateButton, styles.btnColorProses]}
-                    onPress={() => this.uploadImage()}
-                    >
-                    <IconAwe style={styles.iconBtn} name="camera" size={15} color={'white'} />
-                    <Text style={styles.buttonTextModal}>Upload Picture</Text>
-                  </TouchableOpacity>
+                  <View style={[styles.dateRow, { marginTop: 10 }]}>
+                    <TouchableOpacity
+                      style={[styles.dateButton, styles.btnColorTrack]}
+                      onPress={() => this.openCamera('item')}
+                      >
+                      <IconAwe style={styles.iconBtn} name="camera" size={15} color={'white'} />
+                      <Text style={styles.buttonTextModal}>Take Picture</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.dateButton, styles.btnColorProses]}
+                      onPress={() => this.uploadImage()}
+                      >
+                      <IconAwe style={styles.iconBtn} name="upload" size={15} color={'white'} />
+                      <Text style={styles.buttonTextModal}>Upload Picture</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             )}
@@ -2364,7 +2643,7 @@ class CartStock extends Component {
                 detailForm: detailData,
                 noDoc: detailData.no_asset,
                 noTrans: null,
-                tipe: 'stock'
+                tipe: 'stock',
               }}
               handleClose={dataDoc.find(x => x.path === null) !== undefined ? this.openDokumen : this.saveStatus} />
             </ScrollView>
@@ -3073,6 +3352,44 @@ const styles = StyleSheet.create({
     padding: 10,
     textAlignVertical: 'top',
     marginTop: 5,
+  },
+
+  // camera
+  cameraWrapper: {
+    flex: 1,
+    backgroundColor: 'black',
+    margin: 0,
+  },
+  camera: {
+    flex: 1,
+  },
+  cameraControls: {
+    position: 'absolute',
+    bottom: 50,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingHorizontal: 50,
+  },
+  cameraBtnCapture: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 4,
+    borderColor: 'white',
+  },
+  cameraBtnClose: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

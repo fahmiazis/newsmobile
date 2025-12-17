@@ -11,12 +11,12 @@ export default {
       }&sort=id&tipe=${tipe === undefined ? 'all' : tipe}`,
     ),
   }),
-  getAssetAll: (token, limit, search, page, tipe) => ({
+  getAssetAll: (token, limit, search, page, tipe, area) => ({
     type: 'GET_ASSETALL',
     payload: http(token).get(
       `/asset/all?limit=${limit}&search=${search}&page=${
         page === undefined ? 1 : page
-      }&sort=id&tipe=${tipe === undefined ? 'all' : tipe}`,
+      }&sort=id&tipe=${tipe === undefined ? 'all' : tipe}&area=${area === undefined ? 'all' : area}`,
     ),
   }),
   getDetailAsset: (token, no) => ({
