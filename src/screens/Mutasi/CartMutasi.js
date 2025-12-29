@@ -100,7 +100,7 @@ class CartMutasi extends Component {
   chooseDepo = (val) => {
     const data = val.split('-')[0];
     this.setState({kode: data, area: val});
-    this.openArea()
+    this.openArea();
   }
 
   async componentDidMount() {
@@ -122,7 +122,7 @@ class CartMutasi extends Component {
     await this.props.getAsset(token, limit, search, page.currentPage, 'mutasi');
     await this.props.getCart(token);
     await this.props.getDetailDepo(token, 1);
-    const { dataAsset } = this.props.asset
+    const { dataAsset } = this.props.asset;
     this.setState({assetState: dataAsset});
     this.prepareSelect();
     this.setState({limit: 1000});
@@ -232,7 +232,7 @@ class CartMutasi extends Component {
     const { dataDepo } = this.props.depo;
     const {dataUser, token} = this.props.auth;
     const kode = dataUser.kode_plant;
-    const depoFinal = dataDepo.filter(x => x.kode_plant.toLowerCase() !== kode.toLowerCase())
+    const depoFinal = dataDepo.filter(x => x.kode_plant.toLowerCase() !== kode.toLowerCase());
     const cekFilter = depoFinal.filter(x =>
       (x.nama_area.toLowerCase().includes(searchArea.toLowerCase())) ||
       (x.kode_plant.toLowerCase().includes(searchArea.toLowerCase())) ||
@@ -242,7 +242,7 @@ class CartMutasi extends Component {
   }
 
   onSearchAsset = () => {
-    const {searchAsset} = this.state
+    const {searchAsset} = this.state;
     const { dataAsset } = this.props.asset;
     const {dataUser, token} = this.props.auth;
     const cekFilter = dataAsset.filter(x =>
@@ -288,7 +288,7 @@ class CartMutasi extends Component {
       )}
       {this.state.openList ? (
         parseInt(item.status) === 1 || parseInt(item.status) === 11 ? (
-          <View style={styles.footerModal}></View>
+          <View style={styles.footerModal} />
         ) : (
           <TouchableOpacity style={styles.buttonCard} onPress={() => this.prosesOpenDetail({val: item, type: 'add'})}>
             <Text style={styles.buttonTextCard}>Mutasi</Text>
@@ -353,14 +353,20 @@ class CartMutasi extends Component {
       if (dataCart.length > 0) {
         if (dataCart.find(item => item.kode_plant_rec === kode)) {
             if (dataCart.find(item => item.kategori === detailData.kategori)) {
+              const cekKategori =  detailData.kategori ? ((detailData.kategori.toLowerCase() === 'it' || detailData.kategori.toLowerCase() === 'non it') ? true : false) : false;
+              if (!cekKategori) {
+                  this.setState({confirm: 'falseKategori'});
+                  this.openConfirm();
+              } else {
                 await this.props.addMutasi(token, detailData.no_asset, kode);
                 await this.props.getAsset(token, limit, search, page.currentPage, 'mutasi');
                 await this.props.getCart(token);
-                const { dataAsset } = this.props.asset
+                const { dataAsset } = this.props.asset;
                 this.setState({assetState: dataAsset});
                 this.toggleModal();
                 this.setState({confirm: 'add'});
                 this.openConfirm();
+              }
             } else {
                 this.setState({confirm: 'falseKat'});
                 this.openConfirm();
@@ -370,14 +376,20 @@ class CartMutasi extends Component {
             this.openConfirm();
         }
       } else {
+        const cekKategori =  detailData.kategori ? ((detailData.kategori.toLowerCase() === 'it' || detailData.kategori.toLowerCase() === 'non it') ? true : false) : false;
+        if (!cekKategori) {
+            this.setState({confirm: 'falseKategori'});
+            this.openConfirm();
+        } else {
           await this.props.addMutasi(token, detailData.no_asset, kode);
           await this.props.getAsset(token, limit, search, page.currentPage, 'mutasi');
           await this.props.getCart(token);
-          const { dataAsset } = this.props.asset
+          const { dataAsset } = this.props.asset;
           this.setState({assetState: dataAsset});
           this.toggleModal();
           this.setState({confirm: 'add'});
           this.openConfirm();
+        }
       }
     }
   }
@@ -410,7 +422,7 @@ class CartMutasi extends Component {
     await this.props.deleteMutasi(token, val.id);
     await this.props.getCart(token);
     await this.props.getAsset(token, limit, search, page.currentPage, 'mutasi');
-    const { dataAsset } = this.props.asset
+    const { dataAsset } = this.props.asset;
     this.setState({assetState: dataAsset});
     this.openDelete();
     this.setState({confirm: 'delete'});
@@ -958,6 +970,15 @@ class CartMutasi extends Component {
                       <IconMateri name="close" color={'red'} size={50}/>
                       <Text style={styles.sectionTitleInfo}>Gagal Menambahkan Item</Text>
                       <Text style={[styles.sectioSubtitleInfo]}>Pastikan kategori it atau non-it sama dengan item yang lain</Text>
+                      <TouchableOpacity style={styles.btnInfo} onPress={this.openConfirm}>
+                        <Text style={styles.textBtnInfo}>OK</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : this.state.confirm === 'falseKategori' ? (
+                    <View style={styles.sectionInfo}>
+                      <IconMateri name="close" color={'red'} size={50}/>
+                      <Text style={styles.sectionTitleInfo}>Gagal Menambahkan Item</Text>
+                      <Text style={[styles.sectioSubtitleInfo]}>Pastikan data yang ditambahkan memiliki kategori</Text>
                       <TouchableOpacity style={styles.btnInfo} onPress={this.openConfirm}>
                         <Text style={styles.textBtnInfo}>OK</Text>
                       </TouchableOpacity>

@@ -408,7 +408,7 @@ class EksekusiDisposal extends Component {
     const cekNo = [];
     for (let i = 0; i < detailDis.length; i++) {
       if (detailDis[i].nilai_jual === '0' && (detailDis[i].doc_sap === null || detailDis[i].doc_sap === '')) {
-        cekNo.push(detailDis[i])
+        // cekNo.push(detailDis[i])
       } else if (detailDis[i].nilai_jual === '0' && (detailDis[i].date_ba === null || detailDis[i].date_ba === '')) {
         cekSap.push(detailDis[i]);
       } else {
@@ -1558,9 +1558,9 @@ class EksekusiDisposal extends Component {
                   value={detailData.doc_sap} 
                   onChangeText={(val) => this.setState({detailData: { ...detailData, doc_sap: val }})}
                 />
-                {(detailData.doc_sap === null || detailData.doc_sap === '') && (
+                {/* {(detailData.doc_sap === null || detailData.doc_sap === '') && (
                   <Text style={styles.errorTextDetail}>Must be filled</Text>
-                )}
+                )} */}
               </View>
             </>
           )}
@@ -1570,9 +1570,11 @@ class EksekusiDisposal extends Component {
               <TouchableOpacity
                 style={[
                   styles.addButtonDetail,
-                  (detailData.doc_sap === '' || !detailData.doc_sap || this.state.date_ba === '') && { backgroundColor: '#9CA3AF' },
+                  // (detailData.doc_sap === '' || !detailData.doc_sap || this.state.date_ba === '') && { backgroundColor: '#9CA3AF' },
+                  (this.state.date_ba === '' || !this.state.date_ba) && { backgroundColor: '#9CA3AF' },
                 ]}
-                disabled={(detailData.doc_sap === '' || !detailData.doc_sap || this.state.date_ba === '')}
+                // disabled={(detailData.doc_sap === '' || !detailData.doc_sap || this.state.date_ba === '')}
+                disabled={(this.state.date_ba === '' || !this.state.date_ba)}
                 onPress={() => this.updateDataDis()}
               >
                 <Text style={styles.addButtonTextDetail}>Save</Text>

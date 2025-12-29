@@ -1,4 +1,4 @@
-package com.news;
+package com.assetmobile;
 
 import android.os.Bundle;
 import com.facebook.react.ReactActivity;

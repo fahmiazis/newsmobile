@@ -9,7 +9,7 @@ import {
     ScrollView,
     TouchableOpacity,
     ImageBackground,
-    Image
+    Image,
 } from 'react-native';
 import { Button, Input, Item, Form, Left } from 'native-base';
 
@@ -23,6 +23,10 @@ import auth from '../redux/actions/auth';
 import profile from '../redux/actions/profile';
 import logo from '../assets/logo.png'
 import imgBackground from '../assets/loginOffice.webp'
+import messaging from '@react-native-firebase/messaging';
+import FCMHelper from '../helpers/fcmHelper';
+import {API_URL} from '@env';
+
 
 const loginSchema = Yup.object().shape({
     username: Yup.string().required('must be filled'),
@@ -33,7 +37,64 @@ class Login extends Component {
     state = {
         username: '',
         password: '',
+        fcmToken: '',
     };
+
+    componentDidMount() {
+        this.initializeFCM();
+
+        // Setup listeners
+        FCMHelper.setupListeners(
+            this.handleNotificationReceived,
+            this.handleNotificationOpened
+        );
+
+        // Listen token refresh
+        this.unsubscribeTokenRefresh = messaging().onTokenRefresh(async (newToken) => {
+            console.log('FCM Token refreshed:', newToken);
+            this.setState({ fcmToken: newToken });
+        });
+    }
+
+    componentWillUnmount() {
+        FCMHelper.cleanup();
+        if (this.unsubscribeTokenRefresh) {
+            this.unsubscribeTokenRefresh();
+        }
+    }
+
+    initializeFCM = async () => {
+        try {
+            const hasPermission = await FCMHelper.requestPermission();
+
+            if (hasPermission) {
+                const token = await FCMHelper.getFCMToken();
+                this.setState({ fcmToken: token });
+            }
+        } catch (error) {
+            console.error('Error initializing FCM:', error);
+        }
+    }
+
+    handleNotificationReceived = (remoteMessage) => {
+        console.log('Handle notification received:', remoteMessage);
+        // Bisa refresh notif badge, dll
+    }
+
+    handleNotificationOpened = (remoteMessage) => {
+        console.log('Handle notification opened:', remoteMessage);
+
+        // Navigate berdasarkan data notification
+        if (remoteMessage.data && this.props.navigation) {
+            const { route, transaksi, no_transaksi } = remoteMessage.data;
+
+            if (route) {
+                // Bisa navigate ke screen tertentu
+                console.log('Navigate to:', route);
+            }
+        }
+    }
+
     login = async (values) => {
         ToastAndroid.show('waiting...', ToastAndroid.LONG);
         await this.props.login(values);
@@ -43,9 +104,26 @@ class Login extends Component {
         const { isError, isLogin } = this.props.auth;
         if (isLogin) {
             ToastAndroid.show('Login succesfully', ToastAndroid.LONG);
+
+            this.updateFCMTokenAfterLogin();
+
             this.props.navigation.navigate('Tabbed');
         } else if (isError) {
             ToastAndroid.show('wrong username or password', ToastAndroid.LONG);
+        }
+    }
+
+    updateFCMTokenAfterLogin = async () => {
+        try {
+            const { fcmToken } = this.state;
+            const { token } = this.props.auth;
+
+            if (fcmToken && token) {
+                // Ganti dengan API URL kamu
+                await FCMHelper.updateFCMTokenToBackend(fcmToken, API_URL, token);
+            }
+        } catch (error) {
+            console.error('Error updating FCM token after login:', error);
         }
     }
 
@@ -192,7 +270,7 @@ const style = StyleSheet.create({
         paddingHorizontal: 5,
     },
     color: {
-        backgroundColor: "#c0392b",
+        backgroundColor: '#c0392b',
         alignItems: 'center',
         flexDirection: 'row',
         justifyContent: 'center',

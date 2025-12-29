@@ -125,7 +125,7 @@ class EmailStock extends Component {
                             </View>
                             <View style={styles.assetRowModal}>
                                 <Text style={styles.assetLabelModal}>Tanggal Stock Opname:</Text>
-                                <Text style={styles.assetValueModal}>{moment(detailStock[0].tanggalStock).format('DD MMMM YYYY')}</Text>
+                                <Text style={styles.assetValueModal}>{detailStock[0].tanggalStock ? moment(detailStock[0].tanggalStock).format('DD MMMM YYYY') : moment().format('DD MMMM YYYY')}</Text>
                             </View>
                         </View>
                       ) : (

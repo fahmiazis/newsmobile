@@ -1287,17 +1287,17 @@ class Pengadaan extends Component {
                       }
                     />
                   </View>
-                  <TouchableOpacity
+                  {/* <TouchableOpacity
                     style={[styles.buttonModal, styles.btnColorProses]}
                     onPress={() => this.updateFillAsset(item)}
                   >
                     <Text style={styles.buttonTextModal}>
                       Update Nomor Asset
                     </Text>
-                  </TouchableOpacity>
+                  </TouchableOpacity> */}
                 </View>
               ))}
-              {/* <View style={styles.footerModal}>
+              <View style={styles.footerModal}>
                 <TouchableOpacity
                   style={[styles.buttonModal, styles.btnColorProses]}
                   onPress={() => this.generateSap(stateTemp[0])}
@@ -1306,7 +1306,7 @@ class Pengadaan extends Component {
                     Generate By SAP
                   </Text>
                 </TouchableOpacity>
-              </View> */}
+              </View>
             </ScrollView>
             <View style={styles.footerModal}>
               <TouchableOpacity

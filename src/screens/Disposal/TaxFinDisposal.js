@@ -492,8 +492,8 @@ class TaxFinDisposal extends Component {
     const tempdocFin = [];
     const arrdocFin = [];
     if (level === '2') {
-      if (detailDis.find(item => (item.doc_sap === null || item.doc_sap === '') || (item.doc_clearing === null || item.doc_clearing === ''))) {
-      // if (detailDis[0].id === null) {
+      // if (detailDis.find(item => (item.doc_sap === null || item.doc_sap === '') || (item.doc_clearing === null || item.doc_clearing === ''))) {
+      if (detailDis[0].id === null) {
           this.setState({confirm: 'falseNodoc'});
           this.openConfirm();
       } else {
@@ -1697,18 +1697,18 @@ class TaxFinDisposal extends Component {
               <View style={styles.formGroupDetail}>
                 <Text style={styles.labelDetail}>No Doc SAP :</Text>
                 <TextInput style={styles.inputDetail} value={this.state.doc_sap} onChangeText={val => this.setState({doc_sap: val})} />
-                {(this.state.doc_sap === '' || !this.state.doc_sap) && (
+                {/* {(this.state.doc_sap === '' || !this.state.doc_sap) && (
                   <Text style={styles.errorTextDetail}>Must be filled</Text>
                   // <Text style={styles.errorTextDetail}>Field ini bersifat opsional (boleh dikosongkan)</Text>
-                )}
+                )} */}
               </View>
               <View style={styles.formGroupDetail}>
                 <Text style={styles.labelDetail}>No Doc Clearing :</Text>
                 <TextInput style={styles.inputDetail} value={this.state.doc_clearing} onChangeText={val => this.setState({doc_clearing: val})} />
-                {(this.state.doc_clearing === '' || !this.state.doc_clearing) && (
+                {/* {(this.state.doc_clearing === '' || !this.state.doc_clearing) && (
                   <Text style={styles.errorTextDetail}>Must be filled</Text>
                   // <Text style={styles.errorTextDetail}>Field ini bersifat opsional (boleh dikosongkan)</Text>
-                )}
+                )} */}
               </View>
             </>
           )}

@@ -301,7 +301,7 @@ class EksekusiMutasi extends Component {
     for (let i = 0; i < detailMut.length; i++) {
         const data = detailMut[i];
         if (data.doc_sap === '' || data.doc_sap === null || data.doc_sap === 'ya') {
-            cek.push(data);
+            // cek.push(data);
         }
     }
     const cekDoc = [];

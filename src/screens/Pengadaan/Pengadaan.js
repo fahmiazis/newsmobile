@@ -1132,7 +1132,7 @@ class Pengadaan extends Component {
                     onChangeText={val => this.setState({noIo: val})}
                   />
                 </View>
-                {/* {(level === 8) && filter === 'available' ? (
+                {(level === 8) && filter === 'available' ? (
                   <TouchableOpacity
                     style={[styles.buttonDoc, styles.btnColorApprove]}
                     onPress={() => this.updateNomorIo({val: detailIo[0], type: 'sap'})}
@@ -1144,8 +1144,8 @@ class Pengadaan extends Component {
                   </TouchableOpacity>
                 ) : (
                   null
-                )} */}
-                {(level === 8) && filter === 'available' ? (
+                )}
+                {/* {(level === 8) && filter === 'available' ? (
                   <TouchableOpacity
                     style={[styles.buttonDoc, styles.btnColorApprove]}
                     onPress={() => this.updateNomorIo({val: detailIo[0], type: 'web'})}
@@ -1157,7 +1157,7 @@ class Pengadaan extends Component {
                   </TouchableOpacity>
                 ) : (
                   null
-                )}
+                )} */}
               </View>
 
               {/* Daftar Asset */}

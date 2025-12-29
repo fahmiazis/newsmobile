@@ -121,7 +121,7 @@ class CartDisposal extends Component {
     await this.props.getCartDisposal(token);
     // await this.props.getDetailDepo(token, 1);
     // this.prepareSelect();
-    const { dataAsset } = this.props.asset
+    const { dataAsset } = this.props.asset;
     this.setState({assetState: dataAsset});
     this.setState({limit: 1000});
   }
@@ -222,7 +222,7 @@ class CartDisposal extends Component {
   }
 
   onSearchAsset = () => {
-    const {assetState, searchAsset} = this.state
+    const {assetState, searchAsset} = this.state;
     const { dataAsset } = this.props.asset;
     const {dataUser, token} = this.props.auth;
     const cekFilter = dataAsset.filter(x =>
@@ -276,13 +276,13 @@ class CartDisposal extends Component {
       )}
       {this.state.openList ? (
         parseInt(item.status) === 1 || parseInt(item.status) === 11 ? (
-          <View style={styles.footerModal}></View>
+          <View style={styles.footerModal} />
         ) : (
           <View style={styles.footerModal}>
-            <TouchableOpacity style={[styles.buttonItem, styles.btnColorApprove]} onPress={() => this.addSell(item.no_asset)}>
+            <TouchableOpacity style={[styles.buttonItem, styles.btnColorApprove]} onPress={() => this.addSell(item)}>
               <Text style={styles.buttonTextItem}>Sell</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.buttonItem, styles.btnColorReject]} onPress={() => this.addDisposal(item.no_asset)}>
+            <TouchableOpacity style={[styles.buttonItem, styles.btnColorReject]} onPress={() => this.addDisposal(item)}>
               <Text style={styles.buttonTextItem}>Dispose</Text>
             </TouchableOpacity>
           </View>
@@ -376,7 +376,7 @@ class CartDisposal extends Component {
           await this.props.addDisposal(token, detailData.no_asset, kode);
           await this.props.getAsset(token, limit, search, page.currentPage, 'disposal');
           await this.props.getCartDisposal(token);
-          const { dataAsset } = this.props.asset
+          const { dataAsset } = this.props.asset;
           this.setState({assetState: dataAsset});
           this.toggleModal();
           this.setState({confirm: 'add'});
@@ -389,33 +389,41 @@ class CartDisposal extends Component {
     const {dataUser, token} = this.props.auth;
     const {dataCart} = this.props.disposal;
     const cek = dataCart.find(item => item.nilai_jual === '0' || item.nilai_jual === 0);
+    const cekKategori =  val.kategori ? ((val.kategori.toLowerCase() === 'it' || val.kategori.toLowerCase() === 'non it') ? true : false) : false;
     if (cek !== undefined) {
-        this.setState({confirm: 'falseAdd'});
-        this.openConfirm();
+      this.setState({confirm: 'falseAdd'});
+      this.openConfirm();
+    } else if (!cekKategori) {
+      this.setState({confirm: 'falseKategori'});
+      this.openConfirm();
     } else {
-        const data = {
-            no: val,
-        };
-        await this.props.addSell(token, data);
-        this.setState({confirm: 'add'});
-        this.openConfirm();
-        // this.openModalNpwp()
-        this.getDataAsset();
+      const data = {
+          no: val.no_asset,
+      };
+      await this.props.addSell(token, data);
+      this.setState({confirm: 'add'});
+      this.openConfirm();
+      // this.openModalNpwp()
+      this.getDataAsset();
     }
   }
 
-  addDisposal = async (value) => {
+  addDisposal = async (val) => {
     const {dataUser, token} = this.props.auth;
     const {dataCart} = this.props.disposal;
     const cek = dataCart.find(item => item.nilai_jual !== '0' && item.nilai_jual !== 0);
+    const cekKategori =  val.kategori ? ((val.kategori.toLowerCase() === 'it' || val.kategori.toLowerCase() === 'non it') ? true : false) : false;
     if (cek !== undefined) {
-        this.setState({confirm: 'falseAdd'});
-        this.openConfirm();
+      this.setState({confirm: 'falseAdd'});
+      this.openConfirm();
+    } else if (!cekKategori) {
+      this.setState({confirm: 'falseKategori'});
+      this.openConfirm();
     } else {
-        await this.props.addDisposal(token, value);
-        this.setState({confirm: 'add'});
-        this.openConfirm();
-        this.getDataAsset();
+      await this.props.addDisposal(token, val.no_asset);
+      this.setState({confirm: 'add'});
+      this.openConfirm();
+      this.getDataAsset();
     }
   }
 
@@ -1034,6 +1042,15 @@ class CartDisposal extends Component {
                         <Text style={styles.textBtnInfo}>OK</Text>
                       </TouchableOpacity>
                     </View>
+                  ) : (this.state.confirm === 'falseKategori') ? (
+                    <View style={styles.sectionInfo}>
+                      <IconMateri name="close" color={'red'} size={50}/>
+                      <Text style={styles.sectionTitleInfo}>Gagal Menambahkan Item</Text>
+                      <Text style={[styles.sectioSubtitleInfo]}>Pastikan data yang ditambahkan memiliki kategori</Text>
+                      <TouchableOpacity style={styles.btnInfo} onPress={this.openConfirm}>
+                        <Text style={styles.textBtnInfo}>OK</Text>
+                      </TouchableOpacity>
+                    </View>
                   ) : this.state.confirm === 'failSubmit' ? (
                     <View style={styles.sectionInfo}>
                       <IconMateri name="close" color={'red'} size={50}/>
@@ -1233,11 +1250,11 @@ class CartDisposal extends Component {
               <ScrollView style={styles.scrollContentModal}>
                 <ModalDokumen
                 parDoc={{
-                  arrDoc: dataDoc, 
-                  proses: 'upload', 
-                  detailForm: detailData, 
-                  noDoc: detailData.id, 
-                  noTrans: null, 
+                  arrDoc: dataDoc,
+                  proses: 'upload',
+                  detailForm: detailData,
+                  noDoc: detailData.id,
+                  noTrans: null,
                   tipe: 'disposal'}}
                 handleClose={this.openDokumen} />
               </ScrollView>

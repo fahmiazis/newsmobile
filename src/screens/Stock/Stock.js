@@ -194,7 +194,7 @@ class Stock extends Component {
             }
           }
           this.setState({filter: val, newStock: newStock});
-        } else if (val === 'selesai') {
+        } else if (val === 'finish') {
           const newStock = [];
           for (let i = 0; i < dataStock.length; i++) {
             if (dataStock[i].status_form === 8) {
@@ -255,7 +255,7 @@ class Stock extends Component {
               }
             }
             this.setState({filter: val, newStock: newStock});
-        } else if (val === 'selesai') {
+        } else if (val === 'finish') {
             const newStock = [];
             for (let i = 0; i < dataStock.length; i++) {
               if (dataStock[i].status_form === 8) {

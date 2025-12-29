@@ -18,6 +18,7 @@ import auth from '../redux/actions/auth';
 import dashboard from '../redux/actions/dashboard';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import moment from 'moment';
+import messaging from '@react-native-firebase/messaging';
 
 const { width } = Dimensions.get('window');
 const numColumns = 2;
@@ -34,6 +35,18 @@ class Home extends Component {
 
   componentDidMount() {
     this.getDataDashboard();
+
+    this.unsubscribeFCM = messaging().onMessage(async remoteMessage => {
+        console.log('Received notification in Home:', remoteMessage);
+        // Auto refresh notif
+        this.getData();
+    });
+  }
+
+  componentWillUnmount() {
+      if (this.unsubscribeFCM) {
+          this.unsubscribeFCM();
+      }
   }
 
   getDataDashboard = async () => {

@@ -14,6 +14,7 @@ import IconTisto from 'react-native-vector-icons/Fontisto';
 import logo from '../assets/logo.png'
 import notifAct from '../redux/actions/newnotif'
 import moment from 'moment';
+import messaging from '@react-native-firebase/messaging';
 
 const Stack = createStackNavigator();
 const BottomTab = createBottomTabNavigator();
@@ -55,6 +56,10 @@ import CartPengadaan from './Pengadaan/CartPengadaan'
 import RevisiPengadaan from './Pengadaan/RevisiPengadaan'
 
 const SidebarContext = createContext({ toggleSidebar: () => {} })
+
+messaging().setBackgroundMessageHandler(async remoteMessage => {
+  console.log('Message handled in the background!', remoteMessage);
+});
 
 // const SearchButton = () => {
 //     const navigation = useNavigation()
