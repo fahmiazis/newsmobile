@@ -27,6 +27,7 @@ import Profile from './Profile'
 import Scanner from './Scanner'
 import Sidebar from '../components/Sidebar'
 import Notif from './Notif';
+import ReleaseApk from './ReleaseApk';
 
 // Mutasi
 import Mutasi from './Mutasi/Mutasi'
@@ -710,6 +711,20 @@ class Main extends Component {
                                     }}
                                     name="CartDisposal"
                                     component={CartDisposal}
+                                />
+                                <Stack.Screen 
+                                    options={{
+                                        title: "ASSET ~ PMA",
+                                        headerTitleAlign: "center", 
+                                        headerTitleStyle: style.textHeader1,
+                                        headerStyle: style.header,
+                                        headerRight: AccountButton,
+                                        headerLeft: () => (
+                                            <LogoButton onNavReady={this.setSidebarNav} />
+                                        )
+                                    }}
+                                    name="ReleaseApk"
+                                    component={ReleaseApk}
                                 />
                             </>
                         )}

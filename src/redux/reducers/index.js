@@ -26,6 +26,7 @@ import report from './report'
 import menu from './menu'
 import newnotif from './newnotif'
 import dashboard from './dashboard'
+import apk from './apk'
 
 export default combineReducers({
   auth,
@@ -52,5 +53,6 @@ export default combineReducers({
   report,
   menu,
   newnotif,
-  dashboard
+  dashboard,
+  apk
 });

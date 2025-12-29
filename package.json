@@ -28,6 +28,7 @@
     "react-native": "0.63.4",
     "react-native-blob-util": "0.13.18",
     "react-native-camera": "^4.2.1",
+    "react-native-device-info": "7.3.1",
     "react-native-document-picker": "^5.2.0",
     "react-native-dotenv": "^2.4.3",
     "react-native-dropdown-picker": "5.4.6",

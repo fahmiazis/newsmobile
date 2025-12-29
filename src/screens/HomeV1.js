@@ -19,6 +19,7 @@ import dashboard from '../redux/actions/dashboard';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import moment from 'moment';
 import messaging from '@react-native-firebase/messaging';
+import UpdateChecker from '../components/updateChecker';
 
 const { width } = Dimensions.get('window');
 const numColumns = 2;
@@ -77,9 +78,6 @@ class Home extends Component {
       this.prosesOpenChange();
     }
   }
-  // componentWillUnmount() {
-  //   this.getData()
-  // }
 
   changeUser = async (val) => {
     const {token} = this.props.auth;
@@ -105,7 +103,6 @@ class Home extends Component {
 
   prosesOpenChange = async (val) => {
     const {token, dataUser} = this.props.auth;
-    // await this.props.getLogin(token, dataUser.id);
     this.openChange();
   }
 
@@ -156,6 +153,9 @@ class Home extends Component {
           style={styles.bg}
           resizeMode="cover"
       >
+        {/* UPDATE CHECKER COMPONENT - AKAN AUTO CEK & TAMPILKAN POPUP */}
+        <UpdateChecker />
+
         <ScrollView
           style={styles.container}
           refreshControl={
@@ -167,13 +167,6 @@ class Home extends Component {
           <Text style={styles.subtitle}>Please select an option</Text>
 
           <View style={styles.filterContainer}>
-            {/* <Text style={styles.filterLabel}>Select Year:</Text>
-            <TextInput
-              style={styles.yearInput}
-              value={selectedYear.toString()}
-              keyboardType="numeric"
-              onChangeText={(text) => this.setState({ selectedYear: text })}
-            /> */}
             <Text>Selected Year:</Text>
             <TouchableOpacity
               style={styles.dateButton}
@@ -227,8 +220,6 @@ class Home extends Component {
               <TouchableOpacity style={styles.btnDetail} onPress={() => this.goRoute('PengadaanTab')}>
                 <Text style={styles.txtBtn}>Detail</Text>
               </TouchableOpacity>
-              {/* <Image source={io} style={styles.imgCard} />
-              <Text>Pengadaan Aset</Text> */}
             </TouchableOpacity>
             <TouchableOpacity style={styles.assetCard}>
               <Image source={disposal} style={styles.watermark} />
@@ -262,8 +253,6 @@ class Home extends Component {
               <TouchableOpacity style={styles.btnDetail} onPress={() => this.goRoute('DisposalTab')}>
                 <Text style={styles.txtBtn}>Detail</Text>
               </TouchableOpacity>
-              {/* <Image source={disposal} style={styles.imgCard} />
-              <Text>Disposal Aset</Text> */}
             </TouchableOpacity>
             <TouchableOpacity style={styles.assetCard} >
               <Image source={stock} style={styles.watermark} />
@@ -297,8 +286,6 @@ class Home extends Component {
               <TouchableOpacity style={styles.btnDetail} onPress={() => this.goRoute('StockTab')}>
                 <Text style={styles.txtBtn}>Detail</Text>
               </TouchableOpacity>
-              {/* <Image source={stock} style={styles.imgCard} />
-              <Text>Stock Opname Aset</Text> */}
             </TouchableOpacity>
             <TouchableOpacity style={styles.assetCard} >
               <Image source={mutasi} style={styles.watermark} />
@@ -332,8 +319,6 @@ class Home extends Component {
               <TouchableOpacity style={styles.btnDetail} onPress={() => this.goRoute('MutasiTab')}>
                 <Text style={styles.txtBtn}>Detail</Text>
               </TouchableOpacity>
-              {/* <Image source={mutasi} style={styles.imgCard} />
-              <Text>Mutasi Aset</Text> */}
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -429,8 +414,8 @@ const styles = StyleSheet.create({
     shadowColor: 'rgba(0, 0, 0, 0.1)',
     padding: 12,
     marginBottom: 12,
-    width: width / 2.3,   // otomatis 2 kolom
-    minHeight: 200,       // biar gak kependekan
+    width: width / 2.3,
+    minHeight: 200,
     justifyContent: 'flex-start',
     alignItems: 'flex-start',
   },
@@ -467,7 +452,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   btnDetail: {
-    marginTop: 'auto',   // tombol selalu di bawah
+    marginTop: 'auto',
     height: 32,
     backgroundColor: '#e35d5b',
     width: '100%',
@@ -508,7 +493,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
     borderWidth: 1,
     borderColor: '#ccc',
-    width: width * 0.2,   // fleksibel sesuai layar
+    width: width * 0.2,
   },
   dateButtonText: {
     fontSize: 13,

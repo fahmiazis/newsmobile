@@ -134,9 +134,9 @@ class Sidebar extends Component {
           {/* Menu */}
           <ScrollView style={styles.menuContainer}>
             <TouchableOpacity style={[styles.menuItem]} onPress={() => this.goRoute({menu: 'Home', screen: 'Home'})}>
-                <Icon name='home' size={18} color="#fff" />
-                <Text style={styles.menuText}>Dashboard</Text>
-              </TouchableOpacity>
+              <Icon name='home' size={18} color="#fff" />
+              <Text style={styles.menuText}>Dashboard</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.menuItem}
@@ -342,6 +342,10 @@ class Sidebar extends Component {
                 )}
               </View>
             )}
+            <TouchableOpacity style={[styles.menuItem]} onPress={() => this.goRoute({menu: 'ReleaseApk', screen: 'ReleaseApk'})}>
+              <IconAwe name='mobile-phone' size={24} color="#fff" />
+              <Text style={styles.menuText}>Release APK</Text>
+            </TouchableOpacity>
           </ScrollView>
         </Animated.View>
       </View>
