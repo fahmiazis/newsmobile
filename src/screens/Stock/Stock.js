@@ -53,9 +53,9 @@ class Stock extends Component {
       showDateTo: false,
       status: '',
       time: 'pilih',
-      time1: moment().subtract(1, 'month').startOf('month'),
-      // time1: moment().startOf('month').format('DD-MM-YYYY'),
-      time2: moment().endOf('month'),
+      time1: moment().subtract(1, 'month').startOf('month').format('YYYY-MM-DD'),
+      // time1: moment().startOf('month').format('YYYY-MM-DD'),
+      time2: moment().endOf('month').format('YYYY-MM-DD'),
       search: '',
       limit: 100,
       newStock: [],
@@ -86,7 +86,10 @@ class Stock extends Component {
       reason: '',
       total: 0,
       detailData: {},
-      openData: false
+      openData: false,
+      arrApp: [],
+      baseData: [],
+      dataItem: {},
     };
   }
 
@@ -160,8 +163,8 @@ class Stock extends Component {
       const level = dataUser.user_level;
       const id = dataUser.id;
       await this.props.getRole(token);
-      // await this.props.getDepo(token, 1000, '');
-      // await this.props.getDetailUser(token, id);
+      await this.props.getDepo(token, 1000, '');
+      await this.props.getDetailUser(token, id);
       this.getDataStock();
   }
 
@@ -170,39 +173,84 @@ class Stock extends Component {
       this.changeFilter(filter);
   }
 
-   changeFilter = async (val) => {
-      const {dataUser, token} = this.props.auth;
-      const roleAuth = dataUser.role;
-      const {time1, time2, search, limit} = this.state;
-      const cekTime1 = time1 === '' ? 'undefined' : moment(time1).format('YYYY-MM-DD');
-      const cekTime2 = time2 === '' ? 'undefined' : moment(time2).format('YYYY-MM-DD');
+  changeFilterStock = async (val) => {
+    const {dataUser, token} = this.props.auth;
+    const roleAuth = dataUser.role;
+    const {time1, time2, search, limit} = this.state;
+    const cekTime1 = time1 === '' ? 'undefined' : moment(time1).format('YYYY-MM-DD');
+    const cekTime2 = time2 === '' ? 'undefined' : moment(time2).format('YYYY-MM-DD');
 
-      await this.props.getStockAll(token, search, limit, 1, '', val, cekTime1, cekTime2);
+    await this.props.getStockAll(token, search, limit, 1, '', val, cekTime1, cekTime2);
 
-      const {dataStock} = this.props.stock;
-      const {dataRole} = this.props.user;
-      const level = dataUser.user_level.toString();
-      const role = level === '16' || level === '13' ? dataRole.find(({nomor}) => nomor === '27').name : roleAuth;
+    const {dataStock} = this.props.stock;
+    const {dataRole} = this.props.user;
+    const level = dataUser.user_level.toString();
+    const role = level === '16' || level === '13' ? dataRole.find(({nomor}) => nomor === '27').name : roleAuth;
 
-      if (level === '2') {
-        this.setState({filter: val, newStock: dataStock});
-        if (val === 'available') {
-          const newStock = [];
-          for (let i = 0; i < dataStock.length; i++) {
-            if (dataStock[i].status_reject !== 1 && dataStock[i].status_form === 9) {
+    if (level === '2') {
+      this.setState({filter: val, newStock: dataStock});
+      if (val === 'available') {
+        const newStock = [];
+        for (let i = 0; i < dataStock.length; i++) {
+          if (dataStock[i].status_reject !== 1 && dataStock[i].status_form === 9) {
+            newStock.push(dataStock[i]);
+          }
+        }
+        this.setState({filter: val, newStock: newStock});
+      } else if (val === 'finish') {
+        const newStock = [];
+        for (let i = 0; i < dataStock.length; i++) {
+          if (dataStock[i].status_form === 8) {
+            newStock.push(dataStock[i]);
+          }
+        }
+        this.setState({filter: val, newStock: newStock});
+      } else if (val === 'reject') {
+        const newStock = [];
+        for (let i = 0; i < dataStock.length; i++) {
+          if (dataStock[i].status_reject === 1) {
+            newStock.push(dataStock[i]);
+          }
+        }
+        this.setState({filter: val, newStock: newStock});
+      } else {
+        const newStock = [];
+        for (let i = 0; i < dataStock.length; i++) {
+          if (dataStock[i].status_reject !== 1 && dataStock[i].status_form === 9) {
+            console.log();
+          } else {
+            newStock.push(dataStock[i]);
+          }
+        }
+        this.setState({filter: val, newStock: newStock});
+      }
+    } else {
+      if (val === 'available') {
+        const newStock = [];
+        for (let i = 0; i < dataStock.length; i++) {
+          const app = dataStock[i].appForm;
+          const find = app.indexOf(app.find(({jabatan}) => jabatan === role));
+          console.log(app[find]);
+          if (app[find] === undefined) {
+            console.log();
+          } else if (level === '7' || level === 7) {
+            if (dataStock[i].status_reject !== 1 && ((app.length === 0 || app[app.length - 1].status === null) || (app[find] !== undefined && app[find + 1].status === 1 && app[find - 1].status === null && (app[find].status === null || app[find].status === 0)))) {
+              newStock.push(dataStock[i]);
+            }
+          } else if (find === 0 || find === '0') {
+            if ((dataStock[i].status_reject !== 1) && app[find] !== undefined && app[find + 1].status === 1 && app[find].status !== 1) {
+              newStock.push(dataStock[i]);
+            }
+          } else {
+            if (app[find] !== undefined || app[find + 1].status === undefined) {
+              console.log('user cannt approve');
+            } else if ((dataStock[i].status_reject !== 1) && app[find] !== undefined && app[find + 1].status === 1 && app[find - 1].status === null && app[find].status !== 1) {
               newStock.push(dataStock[i]);
             }
           }
-          this.setState({filter: val, newStock: newStock});
-        } else if (val === 'finish') {
-          const newStock = [];
-          for (let i = 0; i < dataStock.length; i++) {
-            if (dataStock[i].status_form === 8) {
-              newStock.push(dataStock[i]);
-            }
-          }
-          this.setState({filter: val, newStock: newStock});
-        } else if (val === 'reject') {
+        }
+        this.setState({filter: val, newStock: newStock});
+      } else if (val === 'reject') {
           const newStock = [];
           for (let i = 0; i < dataStock.length; i++) {
             if (dataStock[i].status_reject === 1) {
@@ -210,94 +258,216 @@ class Stock extends Component {
             }
           }
           this.setState({filter: val, newStock: newStock});
-        } else {
+      } else if (val === 'finish') {
           const newStock = [];
           for (let i = 0; i < dataStock.length; i++) {
-            if (dataStock[i].status_reject !== 1 && dataStock[i].status_form === 9) {
-              console.log();
-            } else {
+            if (dataStock[i].status_form === 8) {
               newStock.push(dataStock[i]);
             }
           }
           this.setState({filter: val, newStock: newStock});
-        }
       } else {
-        if (val === 'available') {
-          const newStock = [];
-          for (let i = 0; i < dataStock.length; i++) {
-            const app = dataStock[i].appForm;
-            const find = app.indexOf(app.find(({jabatan}) => jabatan === role));
-            console.log(app[find]);
-            if (app[find] === undefined) {
+        const newStock = [];
+        for (let i = 0; i < dataStock.length; i++) {
+          const app = dataStock[i].appForm;
+          const find = app.indexOf(app.find(({jabatan}) => jabatan === role));
+          console.log(app[find]);
+          console.log(find);
+          if (app[find] === undefined) {
+            newStock.push(dataStock[i]);
+          } else if (level === '7' || level === 7) {
+            if ((dataStock[i].status_reject !== 1) && ((app.length === 0 || app[app.length - 1].status === null) || (app[find] !== undefined && app[find + 1].status === 1 && app[find - 1].status === null && (app[find].status === null || app[find].status === 0)))) {
               console.log();
-            } else if (level === '7' || level === 7) {
-              if (dataStock[i].status_reject !== 1 && ((app.length === 0 || app[app.length - 1].status === null) || (app[find] !== undefined && app[find + 1].status === 1 && app[find - 1].status === null && (app[find].status === null || app[find].status === 0)))) {
-                newStock.push(dataStock[i]);
-              }
-            } else if (find === 0 || find === '0') {
-              if ((dataStock[i].status_reject !== 1) && app[find] !== undefined && app[find + 1].status === 1 && app[find].status !== 1) {
-                newStock.push(dataStock[i]);
-              }
             } else {
-              if (app[find] !== undefined || app[find + 1].status === undefined) {
-                console.log('user cannt approve');
-              } else if ((dataStock[i].status_reject !== 1) && app[find] !== undefined && app[find + 1].status === 1 && app[find - 1].status === null && app[find].status !== 1) {
-                newStock.push(dataStock[i]);
-              }
-            }
-          }
-          this.setState({filter: val, newStock: newStock});
-        } else if (val === 'reject') {
-            const newStock = [];
-            for (let i = 0; i < dataStock.length; i++) {
-              if (dataStock[i].status_reject === 1) {
-                newStock.push(dataStock[i]);
-              }
-            }
-            this.setState({filter: val, newStock: newStock});
-        } else if (val === 'finish') {
-            const newStock = [];
-            for (let i = 0; i < dataStock.length; i++) {
-              if (dataStock[i].status_form === 8) {
-                newStock.push(dataStock[i]);
-              }
-            }
-            this.setState({filter: val, newStock: newStock});
-        } else {
-          const newStock = [];
-          for (let i = 0; i < dataStock.length; i++) {
-            const app = dataStock[i].appForm;
-            const find = app.indexOf(app.find(({jabatan}) => jabatan === role));
-            console.log(app[find]);
-            console.log(find);
-            if (app[find] === undefined) {
               newStock.push(dataStock[i]);
-            } else if (level === '7' || level === 7) {
-              if ((dataStock[i].status_reject !== 1) && ((app.length === 0 || app[app.length - 1].status === null) || (app[find] !== undefined && app[find + 1].status === 1 && app[find - 1].status === null && (app[find].status === null || app[find].status === 0)))) {
+            }
+          } else if (find === 0 || find === '0') {
+            if ((dataStock[i].status_reject !== 1) && app[find] !== undefined && app[find + 1].status === 1 && app[find].status !== 1) {
                 console.log();
               } else {
                 newStock.push(dataStock[i]);
               }
-            } else if (find === 0 || find === '0') {
-              if ((dataStock[i].status_reject !== 1) && app[find] !== undefined && app[find + 1].status === 1 && app[find].status !== 1) {
-                  console.log();
-                } else {
-                  newStock.push(dataStock[i]);
-                }
+          } else {
+            if (app[find] !== undefined || app[find + 1].status === undefined) {
+              newStock.push(dataStock[i]);
+            } else if ((dataStock[i].status_reject !== 1) && app[find] !== undefined && app[find + 1].status === 1 && app[find - 1].status === null && app[find].status !== 1) {
+              console.log();
             } else {
-              if (app[find] !== undefined || app[find + 1].status === undefined) {
-                newStock.push(dataStock[i]);
-              } else if ((dataStock[i].status_reject !== 1) && app[find] !== undefined && app[find + 1].status === 1 && app[find - 1].status === null && app[find].status !== 1) {
-                console.log();
-              } else {
-                newStock.push(dataStock[i]);
-              }
+              newStock.push(dataStock[i]);
             }
           }
-          this.setState({filter: val, newStock: newStock});
         }
+        this.setState({filter: val, newStock: newStock});
       }
     }
+  }
+
+  changeFilter = async (val) => {
+      const {dataUser, token} = this.props.auth;
+      const roleAuth = dataUser.role;
+      const level = dataUser.user_level.toString();
+      const { detailUser, dataRole } = this.props.user;
+      const { dataDepo } = this.props.depo;
+
+      const {time1, time2, search, limit} = this.state;
+      const cekTime1 = time1 === '' ? 'undefined' : time1;
+      const cekTime2 = time2 === '' ? 'undefined' : time2;
+      await this.props.getStockAll(token, search, limit, 1, '', val, cekTime1, cekTime2);
+
+      const arrRole = detailUser.detail_role;
+      const listRole = [];
+      for (let i = 0; i < arrRole.length + 1; i++) {
+          if (detailUser.user_level === 1) {
+              const data = {fullname: 'admin', name: 'admin', nomor: '1', type: 'all'};
+              listRole.push(data);
+          } else if (i === arrRole.length) {
+              const cek = dataRole.find(item => parseInt(item.nomor) === detailUser.user_level);
+              if (cek !== undefined) {
+                  listRole.push(cek);
+              }
+          } else {
+              const cek = dataRole.find(item => parseInt(item.nomor) === arrRole[i].id_role);
+              if (cek !== undefined) {
+                  listRole.push(cek);
+              }
+          }
+      }
+
+      const { dataStock } = this.props.stock;
+      if (level === '2') {
+          this.setState({filter: val, newStock: dataStock});
+          if (val === 'available') {
+              const newStock = [];
+              for (let i = 0; i < dataStock.length; i++) {
+                  if (dataStock[i].status_reject !== 1 && dataStock[i].status_form === 9) {
+                      newStock.push(dataStock[i]);
+                  }
+              }
+              this.setState({filter: val, newStock: newStock});
+          } else if (val === 'selesai') {
+              const newStock = [];
+              for (let i = 0; i < dataStock.length; i++) {
+                  if (dataStock[i].status_form === 8) {
+                      newStock.push(dataStock[i]);
+                  }
+              }
+              this.setState({filter: val, newStock: newStock});
+          } else if (val === 'reject') {
+              const newStock = [];
+              for (let i = 0; i < dataStock.length; i++) {
+                  if (dataStock[i].status_reject === 1) {
+                      newStock.push(dataStock[i]);
+                  }
+              }
+              this.setState({filter: val, newStock: newStock});
+          } else {
+              const newStock = [];
+              for (let i = 0; i < dataStock.length; i++) {
+                  if (dataStock[i].status_reject !== 1 && dataStock[i].status_form === 9) {
+                      console.log();
+                  } else {
+                      newStock.push(dataStock[i]);
+                  }
+              }
+              this.setState({filter: val, newStock: newStock});
+          }
+      } else {
+          if (val === 'available') {
+              const newStock = [];
+              const arrApp = [];
+              for (let i = 0; i < dataStock.length; i++) {
+                  const depoFrm = dataDepo.find(item => item.kode_plant === dataStock[i].kode_plant);
+                  for (let x = 0; x < listRole.length; x++) {
+                      // console.log(listRole)
+                      const app = dataStock[i].appForm === undefined ? [] : dataStock[i].appForm;
+                      const cekFrm = listRole[x].type === 'area' && depoFrm !== undefined ? (depoFrm.nama_bm.toLowerCase() === detailUser.fullname.toLowerCase() || depoFrm.nama_om.toLowerCase() === detailUser.fullname.toLowerCase() || depoFrm.nama_aos.toLowerCase() === detailUser.fullname.toLowerCase() ? 'pengirim' : 'not found') : 'all';
+                      // const cekFin = cekFrm === 'pengirim' ? 'pengirim' : 'all'
+                      const cekFin = cekFrm === 'pengirim' ? 'all' : 'all';
+                      const cekApp = app.find(item => (item.jabatan === listRole[x].name) && (cekFin === 'all' ? (item.struktur === null || item.struktur === 'all') : (item.struktur === cekFin)));
+                      const find = app.indexOf(cekApp);
+                      // console.log(listRole[x])
+                      // console.log(cekApp)
+                      // console.log(cekFrm)
+                      // console.log(cekTo)
+                      // console.log(cekFin)
+                      if (level === '5' || level === '9') {
+                          console.log('at available 2');
+                          if (find === 0 || find === '0') {
+                              console.log('at available 3');
+                              if (dataStock[i].status_reject !== 1 && app[find] !== undefined && app[find + 1].status === 1 && app[find].status !== 1) {
+                                  if (newStock.find(item => item.no_stock === dataStock[i].no_stock) === undefined) {
+                                      newStock.push(dataStock[i]);
+                                      arrApp.push({index: find, noStock: dataStock[i].no_stock});
+                                  }
+                              }
+                          } else {
+                              console.log('at available 4');
+                              if (find !== app.length - 1) {
+                                  if (dataStock[i].status_reject !== 1 && app[find] !== undefined && app[find + 1].status === 1 && app[find - 1].status === null && app[find].status !== 1) {
+                                      if (newStock.find(item => item.no_stock === dataStock[i].no_stock) === undefined) {
+                                          newStock.push(dataStock[i]);
+                                          arrApp.push({index: find, noStock: dataStock[i].no_stock});
+                                      }
+                                  }
+                              }
+                          }
+                      } else if (find === 0 || find === '0') {
+                          console.log('at available 8');
+                          if (dataStock[i].status_reject !== 1 && app[find] !== undefined && app[find + 1].status === 1 && app[find].status !== 1) {
+                              if (newStock.find(item => item.no_stock === dataStock[i].no_stock) === undefined) {
+                                  newStock.push(dataStock[i]);
+                                  arrApp.push({index: find, noStock: dataStock[i].no_stock});
+                              }
+                          }
+                      } else {
+                          console.log('at available 5');
+                          if (dataStock[i].status_reject !== 1 && app[find] !== undefined && app[find + 1].status === 1 && app[find - 1].status === null && app[find].status !== 1) {
+                              if (newStock.find(item => item.no_stock === dataStock[i].no_stock) === undefined) {
+                                  newStock.push(dataStock[i]);
+                                  arrApp.push({index: find, noStock: dataStock[i].no_stock});
+                              }
+                          }
+                      }
+                  }
+              }
+              this.setState({filter: val, newStock: newStock, baseData: newStock, arrApp: arrApp});
+          } else if (val === 'reject') {
+              const newStock = [];
+              for (let i = 0; i < dataStock.length; i++) {
+                  if (dataStock[i].status_reject === 1) {
+                      newStock.push(dataStock[i]);
+                  }
+              }
+              this.setState({filter: val, newStock: newStock, baseData: newStock});
+          } else if (val === 'full') {
+              const newStock = [];
+              for (let i = 0; i < dataStock.length; i++) {
+                  if (dataStock[i].status_form === 9) {
+                      newStock.push(dataStock[i]);
+                  }
+              }
+              this.setState({filter: val, newStock: newStock, baseData: newStock});
+          } else if (val === 'submit') {
+              const newStock = [];
+              for (let i = 0; i < dataStock.length; i++) {
+                  if (dataStock[i].status_form === 15) {
+                      newStock.push(dataStock[i]);
+                  }
+              }
+              this.setState({filter: val, newStock: newStock, baseData: newStock});
+          } else if (val === 'finish') {
+              const newStock = [];
+              for (let i = 0; i < dataStock.length; i++) {
+                  if (dataStock[i].status_form === 8) {
+                      newStock.push(dataStock[i]);
+                  }
+              }
+              this.setState({filter: val, newStock: newStock, baseData: newStock});
+          } else {
+              this.setState({filter: val, newStock: dataStock, baseData: dataStock});
+          }
+      }
+  }
 
   setDate = (event, selectedDate, type) => {
     if (type === 'from') {
@@ -329,6 +499,7 @@ class Stock extends Component {
     const {dataUser, token} = this.props.auth;
     const level = dataUser.user_level.toString();
     this.setState({loading: true});
+    this.setState({dataItem: val});
     const { filter } = this.state;
     await this.props.getApproveStock(token, val.id);
     await this.props.getDetailStock(token, val.no_stock);
@@ -418,7 +589,7 @@ class Stock extends Component {
 
   openProsesModalDoc = async (val) => {
     const { dataUser, token } = this.props.auth;
-    this.setState({detailData: val})
+    this.setState({detailData: val});
     await this.props.getDocument(token, val.no_asset, val.id);
     this.openDokumen();
   }
@@ -492,7 +663,13 @@ class Stock extends Component {
   approveStock = async () => {
     const { detailStock } = this.props.stock;
     const {dataUser, token} = this.props.auth;
-    await this.props.approveStock(token, detailStock[0].no_stock);
+    const { arrApp, dataItem } = this.state;
+    const cekApp = arrApp.find(item => item.noStock === dataItem.no_stock);
+    const data = {
+        no: dataItem.no_stock,
+        indexApp: cekApp.index,
+    };
+    await this.props.approveStock(token, data);
     await this.props.getApproveStock(token, detailStock[0].id);
     // await this.props.notifStock(token, detailStock[0].no_stock, 'approve', 'HO', null, null)
     this.prosesSendEmail('approve');
@@ -504,10 +681,12 @@ class Stock extends Component {
   }
 
   rejectStock = async (value) => {
-    const {listStat, listMut, typeReject, menuRev} = this.state;
+    const {listStat, listMut, typeReject, menuRev, dataItem} = this.state;
     const {dataUser, token} = this.props.auth;
     const level = dataUser.user_level;
     const { detailStock } = this.props.stock;
+    const { arrApp } = this.state;
+    const cekApp = arrApp.find(item => item.noStock === dataItem.no_stock);
     let temp = '';
     for (let i = 0; i < listStat.length; i++) {
         temp += listStat[i] + '.';
@@ -519,6 +698,7 @@ class Stock extends Component {
         list: listMut,
         type: level === 2 ? 'verif' : 'form',
         type_reject: typeReject,
+        indexApp: level === '2' ? '0' : `${cekApp.index}`,
     };
     await this.props.rejectStock(token, data);
     this.prosesSendEmail(`reject ${typeReject}`);
@@ -1270,7 +1450,7 @@ class Stock extends Component {
                 detailForm: detailData,
                 noDoc: detailData.no_asset,
                 noTrans: null,
-                tipe: 'stock'
+                tipe: 'stock',
               }}
               handleClose={this.openDokumen}
               />
