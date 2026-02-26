@@ -107,6 +107,7 @@ class CartStock extends Component {
       typeAdditional: '',
       cameraOn: false,
       cameraReady: false,
+      cekField: []
     };
   }
 
@@ -1128,6 +1129,7 @@ class CartStock extends Component {
     const data = {
         area: detailDepo.nama_area,
         kode_plant: dataAsset[0].kode_plant,
+        no_asset: val.no_asset,
         deskripsi: val.deskripsi,
         merk: val.merk,
         satuan: val.satuan,
@@ -1150,6 +1152,7 @@ class CartStock extends Component {
     const dataAsset = this.props.asset.assetAll;
     const { detailDepo } = this.props.depo;
     const data = {
+        no_asset: val.no_asset,
         deskripsi: val.deskripsi,
         merk: val.merk,
         satuan: val.satuan,
@@ -1197,12 +1200,21 @@ class CartStock extends Component {
     const {dataUser, token} = this.props.auth;
     const {asetPart} = this.state;
     const area = asetPart;
-    await this.props.getAssetAll(token, 1000, '', 1, 'asset', area);
+    await this.props.getAssetAll(token, 'all', '', 1, 'asset', area);
     const dataAsset = this.props.asset.assetAll;
     const upPict = [];
     const oldPict = [];
+    const cekField = [];
     for (let i = 0; i < dataAsset.length; i++) {
       const item = dataAsset[i];
+      const cekValGrouping =  item.grouping?.toLowerCase() !== 'dipakai' || item.grouping === null  || item.grouping === '';
+      const cekLokasi = item.lokasi === null;
+      const cekGrouping = item.grouping === null;
+      const cekKondisi = item.kondisi === null;
+      const cekFisik = item.status_fisik === null;
+      const cekKategori = item.kategori === null;
+      const cekKeterangan = cekValGrouping && (item.keterangan === '' || item.keterangan === null);
+      const cekAll = cekLokasi || cekKondisi || cekGrouping || cekFisik || cekKategori || cekKeterangan;
       if (item.pict !== undefined && item.pict !== null && item.pict.length > 0) {
         const dataImg = item.pict[item.pict.length - 1];
         const date1 = moment(dataImg.createdAt);
@@ -1216,9 +1228,16 @@ class CartStock extends Component {
       } else {
         upPict.push(item);
       }
+
+      if (cekAll) {
+        cekField.push(item);
+      }
     }
     if (upPict.length > 0 || oldPict.length > 0) {
       this.setState({confirm: 'failSubmit', oldPict: oldPict, upPict: upPict});
+      this.openConfirm();
+    } else if (cekField.length > 0) {
+      this.setState({confirm: 'failField', cekField: cekField});
       this.openConfirm();
     } else {
       this.openList();
@@ -1425,7 +1444,7 @@ class CartStock extends Component {
   }
 
   render() {
-    const {oldPict, upPict, filter, newStock, openDetail, loading, realApp, detailData, listStatus} = this.state;
+    const {oldPict, upPict, filter, newStock, openDetail, loading, realApp, detailData, listStatus, cekField} = this.state;
 
     const loadingDepo = this.props.depo.isLoading;
     const loadingStock = this.props.stock.isLoading;
@@ -1974,7 +1993,7 @@ class CartStock extends Component {
                   <Picker.Item value="Select" label="Select..." />
                   <Picker.Item value={'baik'} label={'Baik'}/>
                   <Picker.Item value={'rusak'} label={'Rusak'}/>
-                  <Picker.Item value={'-'} label={'-'}/>
+                  <Picker.Item value={'tidak ada'} label={'Tidak Ada'}/>
                 </Picker>
               </View>
               {detailData.kondisi !== '' && detailData.kondisi === null && (
@@ -2091,6 +2110,18 @@ class CartStock extends Component {
             )}
             {/* Form */}
             <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>No Asset :</Text>
+              <TextInput
+                style={styles.inputDetailAct}
+                value={detailData.no_asset}
+                onChangeText={(val) => this.setState({detailData: { ...detailData, no_asset: val }})}
+              />
+              {!detailData.no_asset && (
+                <Text style={styles.errorTextDetail}>Must be filled</Text>
+              )}
+            </View>
+
+            <View style={styles.formGroupDetail}>
               <Text style={styles.labelDetail}>Deskripsi :</Text>
               <TextInput
                 style={styles.inputDetailAct}
@@ -2178,7 +2209,7 @@ class CartStock extends Component {
                   <Picker.Item value="Select" label="Select..." />
                   <Picker.Item value={'baik'} label={'Baik'}/>
                   {/* <Picker.Item value={'rusak'} label={'Rusak'}/>
-                  <Picker.Item value={'-'} label={'-'}/> */}
+                  <Picker.Item value={'tidak ada'} label={'Tidak Ada'}/> */}
                 </Picker>
               </View>
               {detailData.kondisi !== '' && detailData.kondisi === null && (
@@ -2225,7 +2256,8 @@ class CartStock extends Component {
                 <TouchableOpacity
                   style={[
                     styles.addButtonDetail,
-                    (!detailData.merk ||
+                    (!detailData.no_asset ||
+                    !detailData.merk ||
                     !detailData.deskripsi ||
                     !detailData.satuan ||
                     !detailData.lokasi ||
@@ -2234,6 +2266,7 @@ class CartStock extends Component {
                     !detailData.grouping) && { backgroundColor: '#9CA3AF' },
                   ]}
                   disabled={
+                    !detailData.no_asset ||
                     !detailData.merk ||
                     !detailData.deskripsi ||
                     !detailData.satuan ||
@@ -2362,6 +2395,19 @@ class CartStock extends Component {
                     {oldPict.length > 0 && oldPict.map(item => {
                       return (
                         <Text style={[styles.sectioSubtitleInfo]}>Mohon untuk upload dokumentasi terbaru dari no asset {item.no_asset}</Text>
+                      );
+                    })}
+                    <TouchableOpacity style={styles.btnInfo} onPress={this.openConfirm}>
+                      <Text style={styles.textBtnInfo}>OK</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : this.state.confirm === 'failField' ? (
+                  <View style={styles.sectionInfo}>
+                    <IconMateri name="close" color={'red'} size={50}/>
+                    <Text style={styles.sectionTitleInfo}>Gagal Submit</Text>
+                    {cekField.length > 0 && cekField.map(item => {
+                      return (
+                        <Text style={[styles.sectioSubtitleInfo]}>Pastikan lokasi, kategori, status fisik, kondisi, status asset, dan keterangan (selain asset dipakai) telah terisi {item.no_asset}</Text>
                       );
                     })}
                     <TouchableOpacity style={styles.btnInfo} onPress={this.openConfirm}>

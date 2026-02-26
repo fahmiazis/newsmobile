@@ -1467,7 +1467,7 @@ class RevisiStock extends Component {
                   <Picker.Item value="Select" label="Select..." />
                   <Picker.Item value={'baik'} label={'Baik'}/>
                   <Picker.Item value={'rusak'} label={'Rusak'}/>
-                  <Picker.Item value={''} label={'-'}/>
+                  <Picker.Item value={'tidak ada'} label={'Tidak Ada'}/>
                 </Picker>
               </View>
               {!detailData.kondisi && (
