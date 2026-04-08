@@ -25,7 +25,7 @@ import depo from '../../redux/actions/depo';
 import stock from '../../redux/actions/stock';
 import tempmail from '../../redux/actions/tempmail';
 import newnotif from '../../redux/actions/newnotif';
-import asset from '../../redux/actions/asset';
+import asset_stock from '../../redux/actions/asset_stock';
 
 import blankImg from '../../assets/blank.png';
 import placeholder from '../../assets/placeholder.png';
@@ -181,7 +181,7 @@ class CartStock extends Component {
   async componentDidUpdate(prevProps) {
     const {isUpload, isError, isApprove, isReject, rejReject, rejApprove, isImage, isSubmit, isSubaset, isUpdateStock, isDocStock} = this.props.stock;
     const {detailData, dataId, dataItem} = this.state;
-    const { isUpdateNew, detailAsset } = this.props.asset;
+    const { isUpdateNew, detailAsset } = this.props.asset_stock;
     const {dataUser, token} = this.props.auth;
     const { route, navigation } = this.props;
 
@@ -294,7 +294,7 @@ class CartStock extends Component {
           const dataAsset = await this.getDataAsset({ asetPart: kode });
           this.checkAndOpenDetail(no, dataAsset);
         } else {
-          const dataAsset = this.props.asset.assetAll;
+          const dataAsset = this.props.asset_stock.assetAll;
           this.checkAndOpenDetail(no, dataAsset);
         }
       } else {
@@ -379,7 +379,7 @@ class CartStock extends Component {
 
   getDataAsset = async (value) => {
     const { dataUser, token } = this.props.auth;
-    const { page } = this.props.asset;
+    const { page } = this.props.asset_stock;
     const { asetPart, search } = this.state;
 
     const area = value?.asetPart || asetPart;
@@ -390,7 +390,7 @@ class CartStock extends Component {
     await this.props.getAssetAll(token, limit, search, page.currentPage, 'asset', area);
     await this.props.getDetailDepo(token, 1);
 
-    return this.props.asset.assetAll; // return data supaya bisa langsung dipakai
+    return this.props.asset_stock.assetAll; // return data supaya bisa langsung dipakai
   }
 
   checkAndOpenDetail = (no, data) => {
@@ -422,7 +422,7 @@ class CartStock extends Component {
     this.setState({confirm: 'update'});
     this.openConfirm();
     this.closeModal();
-    const { page } = this.props.asset;
+    const { page } = this.props.asset_stock;
     const { asetPart, search } = this.state;
 
     const area = asetPart;
@@ -460,9 +460,9 @@ class CartStock extends Component {
       // Upload pakai uploadPicture
       await this.props.uploadPicture(token, detailData.no_asset, data);
       await this.props.getDetailAsset(token, detailData.id);
-      const { detailAsset } = this.props.asset;
+      const { detailAsset } = this.props.asset_stock;
       this.setState({detailData: detailAsset});
-      const { page } = this.props.asset;
+      const { page } = this.props.asset_stock;
       const { asetPart, search } = this.state;
 
       const area = asetPart;
@@ -588,9 +588,9 @@ class CartStock extends Component {
 
       await this.props.uploadPicture(token, detailData.no_asset, data);
       await this.props.getDetailAsset(token, detailData.id);
-      const { detailAsset } = this.props.asset;
+      const { detailAsset } = this.props.asset_stock;
       this.setState({detailData: detailAsset});
-      const { page } = this.props.asset;
+      const { page } = this.props.asset_stock;
       const { asetPart, search } = this.state;
 
       const area = asetPart;
@@ -729,9 +729,9 @@ class CartStock extends Component {
 
       await this.props.uploadPicture(token, detailData.no_asset, data);
       await this.props.getDetailAsset(token, detailData.id);
-      const { detailAsset } = this.props.asset;
+      const { detailAsset } = this.props.asset_stock;
       this.setState({detailData: detailAsset});
-      const { page } = this.props.asset;
+      const { page } = this.props.asset_stock;
       const { asetPart, search } = this.state;
 
       const area = asetPart;
@@ -1067,7 +1067,7 @@ class CartStock extends Component {
   prosesAddStock = async (val) => {
     const {dataUser, token} = this.props.auth;
     const level = dataUser.user_level.toString();
-    const { page } = this.props.asset;
+    const { page } = this.props.asset_stock;
     const search =  '';
     const limit = this.state.limit;
     const {kode, detailData} = this.state;
@@ -1124,7 +1124,7 @@ class CartStock extends Component {
 
   addStock = async (val) => {
     const {dataUser, token} = this.props.auth;
-    const dataAsset = this.props.asset.assetAll;
+    const dataAsset = this.props.asset_stock.assetAll;
     const { detailDepo } = this.props.depo;
     const data = {
         area: detailDepo.nama_area,
@@ -1149,7 +1149,7 @@ class CartStock extends Component {
 
   updateStock = async (val) => {
     const {dataUser, token} = this.props.auth;
-    const dataAsset = this.props.asset.assetAll;
+    const dataAsset = this.props.asset_stock.assetAll;
     const { detailDepo } = this.props.depo;
     const data = {
         no_asset: val.no_asset,
@@ -1201,7 +1201,7 @@ class CartStock extends Component {
     const {asetPart} = this.state;
     const area = asetPart;
     await this.props.getAssetAll(token, 'all', '', 1, 'asset', area);
-    const dataAsset = this.props.asset.assetAll;
+    const dataAsset = this.props.asset_stock.assetAll;
     const upPict = [];
     const oldPict = [];
     const cekField = [];
@@ -1246,7 +1246,7 @@ class CartStock extends Component {
 
   cekStock = async () => {
     const {dataUser, token} = this.props.auth;
-    const dataAsset = this.props.asset.assetAll;
+    const dataAsset = this.props.asset_stock.assetAll;
     const cekRusak = dataAsset.filter(item => item.kondisi === 'rusak');
     const time1 = moment().subtract(2, 'month').startOf('month').format('YYYY-MM-DD');
     const time2 = moment().endOf('month').format('YYYY-MM-DD');
@@ -1451,11 +1451,11 @@ class CartStock extends Component {
     const loadingTempmail = this.props.tempmail.isLoading;
     const loadingNewnotif = this.props.newnotif.isLoading;
     const loadingDokumen = this.props.dokumen.isLoading;
-    const loadingAsset = this.props.asset.isLoading;
+    const loadingAsset = this.props.asset_stock.isLoading;
     const loadingAll = loadingAsset || loadingDepo || loadingStock || loadingTempmail || loadingNewnotif || loadingDokumen || loading;
 
     const { dataStock, noStock, dataDoc, detailStock, statusList, dataStatus, stockArea} = this.props.stock;
-    const dataAsset = this.props.asset.assetAll;
+    const dataAsset = this.props.asset_stock.assetAll;
     const { dataDepo } = this.props.depo;
 
     const titleApprovals = [
@@ -3441,7 +3441,7 @@ const styles = StyleSheet.create({
 
 const mapStateToProps = state => ({
     stock: state.stock,
-    asset: state.asset,
+    asset_stock: state.asset_stock,
     depo: state.depo,
     tempmail: state.tempmail,
     auth: state.auth,
@@ -3450,12 +3450,12 @@ const mapStateToProps = state => ({
 });
 
 const mapStockpatchToProps = {
-    getAsset: asset.getAsset,
-    getAssetAll: asset.getAssetAll,
-    updateAsset: asset.updateAsset,
-    updateAssetNew: asset.updateAssetNew,
-    resetError: asset.resetError,
-    nextPage: asset.nextPage,
+    getAsset: asset_stock.getAsset,
+    getAssetAll: asset_stock.getAssetAll,
+    updateAsset: asset_stock.updateAsset,
+    updateAssetNew: asset_stock.updateAssetNew,
+    resetError: asset_stock.resetError,
+    nextPage: asset_stock.nextPage,
     uploadDocument: stock.uploadDocument,
     getDetailDepo: depo.getDetailDepo,
     getDepo: depo.getDepo,
@@ -3471,10 +3471,10 @@ const mapStockpatchToProps = {
     getStatus: stock.getStatus,
     getStatusAll: stock.getStatusAll,
     resetStock: stock.resetStock,
-    getDetailAsset: asset.getDetailAsset,
+    getDetailAsset: asset_stock.getDetailAsset,
     getDocument: stock.getDocumentStock,
     cekDokumen: stock.cekDocumentStock,
-    resetData: asset.resetData,
+    resetData: asset_stock.resetData,
     updateStock: stock.updateStock,
     updateStockNew: stock.updateStockNew,
     getDetailItem: stock.getDetailItem,

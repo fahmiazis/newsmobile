@@ -8,25 +8,26 @@ import bookmark from './bookmark';
 import profile from './profile';
 import article from './article';
 import search from './search';
-import pengadaan from './pengadaan'
-import depo from './depo'
-import user from './user'
-import asset from './asset'
-import approve from './approve'
-import email from './email'
-import tempmail from './tempmail'
-import setuju from './setuju'
-import dokumen from './dokumen'
-import disposal from './disposal'
-import stock from './stock'
-import mutasi from './mutasi'
-import notif from './notif'
-import tracking from './tracking'
-import report from './report'
-import menu from './menu'
-import newnotif from './newnotif'
-import dashboard from './dashboard'
-import apk from './apk'
+import pengadaan from './pengadaan';
+import depo from './depo';
+import user from './user';
+import asset from './asset';
+import approve from './approve';
+import email from './email';
+import tempmail from './tempmail';
+import setuju from './setuju';
+import dokumen from './dokumen';
+import disposal from './disposal';
+import stock from './stock';
+import mutasi from './mutasi';
+import notif from './notif';
+import tracking from './tracking';
+import report from './report';
+import menu from './menu';
+import newnotif from './newnotif';
+import dashboard from './dashboard';
+import apk from './apk';
+import asset_stock from './asset_stock';
 
 export default combineReducers({
   auth,
@@ -54,5 +55,6 @@ export default combineReducers({
   menu,
   newnotif,
   dashboard,
-  apk
+  apk,
+  asset_stock,
 });
