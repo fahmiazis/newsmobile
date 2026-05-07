@@ -23,10 +23,6 @@ export default {
     type: 'GET_REVISI',
     payload: http(token).get(`/ticket/rev?status=${status}`),
   }),
-  getApproveIo: (token, no) => ({
-    type: 'GET_APPROVEIO',
-    payload: http(token).patch('/ticket/approve', qs.stringify({no: no})),
-  }),
   getDocumentIo: (token, no) => ({
     type: 'GET_DOCIO',
     payload: http(token).patch('/ticket/document', qs.stringify({no: no})),
@@ -162,6 +158,43 @@ export default {
     type: 'GENNO_SAP',
     payload: http(token).patch('/ticket/asetsap', qs.stringify({no: no})),
   }),
+
+  // Detail Item
+    addDetailItem: (token, data) => ({
+        type: 'ADD_DETAILITEM',
+        payload: http(token).post('/ticket/item-add', data),
+    }),
+    updateDetailItem: (token, data) => ({
+        type: 'UPDATE_DETAILITEM',
+        payload: http(token).patch('/ticket/item-update', qs.stringify(data)),
+    }),
+    deleteDetailItem: (token, id) => ({
+        type: 'DELETE_DETAILITEM',
+        payload: http(token).delete(`/ticket/item-delete/${id}`),
+    }),
+    getDetailItem: (token, id) => ({
+        type: 'GET_DETAILITEM',
+        payload: http(token).get(`/ticket/item-get/${id}`),
+    }),
+
+    // approval
+    getApproveIo: (token, no, type) => ({
+        type: 'GET_APPROVEIO',
+        payload: http(token).patch('/ticket/approve', qs.stringify({no: no, type: type || 'all'})),
+    }),
+    makeApproval: (token, id, data, type) => ({
+        type: 'MAKE_APPROVALIO',
+        payload: http(token).patch(`/ticket/makeapp/${id}?type=${type ? type : 'update'}`, qs.stringify({dataApp: data})),
+    }),
+    deleteApproval: (token, id) => ({
+        type: 'DELETE_APPROVALIO',
+        payload: http(token).delete(`/ticket/delapp/${id}`),
+    }),
+    saveApproval: (token, no) => ({
+        type: 'SAVE_APPROVALIO',
+        payload: http(token).patch('/ticket/saveapp', qs.stringify({no: no})),
+    }),
+
   resetError: () => ({
     type: 'RESET',
   }),

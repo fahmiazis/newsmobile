@@ -26,6 +26,7 @@ import stock from '../../redux/actions/stock';
 import tempmail from '../../redux/actions/tempmail';
 import newnotif from '../../redux/actions/newnotif';
 import asset_stock from '../../redux/actions/asset_stock';
+import status_stock from '../../redux/actions/status_stock';
 
 import blankImg from '../../assets/blank.png';
 import placeholder from '../../assets/placeholder.png';
@@ -64,7 +65,7 @@ class CartStock extends Component {
       barcode: null,
       modalScan: false,
       modalTrack: false,
-      limit: 1000,
+      limit: 'all',
       openList: false,
       isModalVisible: false,
       selectedKategori: '',
@@ -107,7 +108,7 @@ class CartStock extends Component {
       typeAdditional: '',
       cameraOn: false,
       cameraReady: false,
-      cekField: []
+      cekField: [],
     };
   }
 
@@ -144,39 +145,6 @@ class CartStock extends Component {
       this.setState({detailData: { ...this.state.detailData, [type]: val}});
     }
   }
-
-  // async componentDidMount() {
-  //   const {dataUser, token} = this.props.auth;
-  //   const kode = dataUser.kode_plant;
-  //   const level = dataUser.user_level;
-  //   const { route, navigation } = this.props;
-  //   this.unsubscribe = this.props.navigation.addListener('focus', async () => {
-  //     if (level === 5 || level === 9) {
-  //       if (route.params?.no && route.params.no) {
-  //         this.setState({asetPart: kode, noRoute: route.params.no});
-  //         await navigation.setParams({ no: undefined });
-  //         this.getDataAsset({asetPart: kode});
-  //       } else {
-  //         await navigation.setParams({ no: undefined });
-  //         this.getDataAsset({asetPart: kode});
-  //       }
-  //     } else {
-  //       await navigation.setParams({ no: undefined });
-  //       this.getDataStock();
-  //     }
-
-  //     // if (level === 5 || level === 9) {
-  //     //   this.setState({asetPart: kode, noRoute: route.params.no});
-  //     //   this.getDataAsset({asetPart: kode});
-  //     // } else {
-  //     //   this.getDataStock();
-  //     // }
-  //   });
-  // }
-
-  // componentWillUnmount() {
-  //   if (this.unsubscribe) {this.unsubscribe();}
-  // }
 
   async componentDidUpdate(prevProps) {
     const {isUpload, isError, isApprove, isReject, rejReject, rejApprove, isImage, isSubmit, isSubaset, isUpdateStock, isDocStock} = this.props.stock;
@@ -252,7 +220,6 @@ class CartStock extends Component {
   }
 
   componentDidMount() {
-    console.log('hadle parammm di panggil dri did mount kinggg');
     this.unsubscribeFocus = this.props.navigation.addListener('focus', () => {
       this.handleParams('mount');
     });
@@ -385,9 +352,11 @@ class CartStock extends Component {
     const area = value?.asetPart || asetPart;
     const limit = this.state.limit || 100; // default limit
 
+    await this.props.getAllStatusStock(token);
+    await this.props.getDropdown(token);
     await this.props.getStatusAll(token);
     await this.props.getDepo(token, 1000, '');
-    await this.props.getAssetAll(token, limit, search, page.currentPage, 'asset', area);
+    await this.props.getAssetAll(token, limit, '', 1, 'asset', area);
     await this.props.getDetailDepo(token, 1);
 
     return this.props.asset_stock.assetAll; // return data supaya bisa langsung dipakai
@@ -416,6 +385,7 @@ class CartStock extends Component {
       status_fisik: detailData.status_fisik,
       kondisi: detailData.kondisi === '-' ? '' : detailData.kondisi,
       grouping: detailData.grouping,
+      notes_dropdown: detailData.notes_dropdown,
       keterangan: detailData.keterangan,
     };
     await this.props.updateAsset(token, detailData.id, data);
@@ -427,7 +397,7 @@ class CartStock extends Component {
 
     const area = asetPart;
     const limit = this.state.limit || 100;
-    await this.props.getAssetAll(token, limit, search, page.currentPage, 'asset', area);
+    await this.props.getAssetAll(token, limit, '', page.currentPage, 'asset', area);
   }
 
   takeFromCamera = async () => {
@@ -467,7 +437,7 @@ class CartStock extends Component {
 
       const area = asetPart;
       const limit = this.state.limit || 100;
-      await this.props.getAssetAll(token, limit, search, page.currentPage, 'asset', area);
+      await this.props.getAssetAll(token, limit, '', 1, 'asset', area);
 
       Alert.alert('Success', 'Foto berhasil diupload');
     } catch (error) {
@@ -595,7 +565,7 @@ class CartStock extends Component {
 
       const area = asetPart;
       const limit = this.state.limit || 100;
-      await this.props.getAssetAll(token, limit, search, page.currentPage, 'asset', area);
+      await this.props.getAssetAll(token, limit, '', 1, 'asset', area);
     } catch (err) {
       if (DocumentPicker.isCancel(err)) {
         console.log('User cancel');
@@ -736,7 +706,7 @@ class CartStock extends Component {
 
       const area = asetPart;
       const limit = this.state.limit || 100;
-      await this.props.getAssetAll(token, limit, search, page.currentPage, 'asset', area);
+      await this.props.getAssetAll(token, limit, '', 1, 'asset', area);
 
       Alert.alert('Success', 'Foto berhasil diupload');
     } catch (err) {
@@ -1198,6 +1168,7 @@ class CartStock extends Component {
 
   cekSubmit = async () => {
     const {dataUser, token} = this.props.auth;
+    const { dataDropdown } = this.props.status_stock
     const {asetPart} = this.state;
     const area = asetPart;
     await this.props.getAssetAll(token, 'all', '', 1, 'asset', area);
@@ -1213,8 +1184,11 @@ class CartStock extends Component {
       const cekKondisi = item.kondisi === null;
       const cekFisik = item.status_fisik === null;
       const cekKategori = item.kategori === null;
+
+      const dataNotes = dataDropdown.find(x => x.description === item.notes_dropdown);
+      const cekNotes = dataNotes ? (dataNotes.mark ? true : false) : false;
       const cekKeterangan = cekValGrouping && (item.keterangan === '' || item.keterangan === null);
-      const cekAll = cekLokasi || cekKondisi || cekGrouping || cekFisik || cekKategori || cekKeterangan;
+      const cekAll = cekLokasi || cekKondisi || cekGrouping || cekFisik || cekKategori || (cekKeterangan && cekNotes) || (cekKeterangan && !dataNotes);
       if (item.pict !== undefined && item.pict !== null && item.pict.length > 0) {
         const dataImg = item.pict[item.pict.length - 1];
         const date1 = moment(dataImg.createdAt);
@@ -1457,6 +1431,7 @@ class CartStock extends Component {
     const { dataStock, noStock, dataDoc, detailStock, statusList, dataStatus, stockArea} = this.props.stock;
     const dataAsset = this.props.asset_stock.assetAll;
     const { dataDepo } = this.props.depo;
+    const { dataDropdown, dataStatusStock } = this.props.status_stock;
 
     const titleApprovals = [
       {
@@ -2018,11 +1993,36 @@ class CartStock extends Component {
               )}
             </View>
 
+            {dataStatusStock.find(x => x.status === detailData.grouping && x.is_dropdown) && (
+              <View style={styles.formGroupDetail}>
+                <Text style={styles.labelDetail}>List Keterangan :</Text>
+                <View style={styles.pickerWrapperDetail}>
+                  <Picker
+                    selectedValue={`${detailData.notes_dropdown === '' ? '-' : detailData.notes_dropdown}`}
+                    style={styles.pickerDetail}
+                    onValueChange={(itemValue) => this.fillStatus(itemValue, 'notes_dropdown')}
+                  >
+                     <Picker.Item label="Select..." />
+                    {dataDropdown.length > 0 && dataDropdown.filter(y => y.status_id === dataStatusStock.find(x => x.status === detailData.grouping).id).map(x => {
+                        return (
+                          <Picker.Item value={x.description} label={x.description}/>
+                        );
+                    })}
+                  </Picker>
+                </View>
+                {detailData.notes_dropdown !== '' && detailData.notes_dropdown === null && (
+                  <Text style={styles.errorTextDetail}>Must be filled</Text>
+                )}
+              </View>
+            )}
+
             <View style={styles.formGroupDetail}>
               <Text style={styles.labelDetail}>Keterangan :</Text>
               <TextInput
                 style={styles.inputDetailAct}
                 value={detailData.keterangan}
+                editable={(dataStatusStock.find(x => x.status === detailData.grouping && x.is_dropdown) && detailData.notes_dropdown === null) ? false : true}
+                placeholder={dataDropdown.find(x => x.description === detailData.notes_dropdown && x.mark) ? dataDropdown.find(x => x.description === detailData.notes_dropdown && x.mark).placeholder : ''}
                 onChangeText={(val) => this.setState({detailData: { ...detailData, keterangan: val }})}
               />
             </View>
@@ -3447,6 +3447,7 @@ const mapStateToProps = state => ({
     auth: state.auth,
     newnotif: state.newnotif,
     dokumen: state.dokumen,
+    status_stock: state.status_stock,
 });
 
 const mapStockpatchToProps = {
@@ -3486,6 +3487,8 @@ const mapStockpatchToProps = {
     addNewNotif: newnotif.addNewNotif,
     getDraftEmail: tempmail.getDraftEmail,
     sendEmail: tempmail.sendEmail,
+    getDropdown: status_stock.getDropdown,
+    getAllStatusStock: status_stock.getAllStatusStock,
 };
 
 export default connect(mapStateToProps, mapStockpatchToProps)(CartStock);

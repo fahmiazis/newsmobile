@@ -12,6 +12,7 @@ import { RNCamera } from 'react-native-camera';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import IconAwe from 'react-native-vector-icons/FontAwesome5';
 import IconMateri from 'react-native-vector-icons/MaterialIcons';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Modal from 'react-native-modal';
@@ -83,6 +84,8 @@ class Disposal extends Component {
       typeModal: '',
       isModalVisible: false,
       modalRinci: false,
+      isLoading: false,
+      dataDocCek: [],
     };
   }
 
@@ -317,15 +320,47 @@ class Disposal extends Component {
     const level = dataUser.user_level.toString();
     this.setState({loading: true});
     const { filter } = this.state;
+    this.setState({isLoading: true});
     await this.props.getApproveDisposal(token, val.no_disposal, 'Disposal');
     await this.props.getDetailDisposal(token, val.no_disposal);
     const {disApp} = this.props.disposal;
     const realApp = disApp.pembuat !== undefined ? Object.values(disApp) : [];
+    const dataCek = [];
     if (filter === 'available') {
         const {detailDis} = this.props.disposal;
         const { arrApp } = this.state;
         const cekApp = arrApp.find(item => item.noDis === detailDis[0].no_disposal);
         this.setState({selApp: cekApp});
+        for (let i = 0; i < detailDis.length; i++) {
+          const tempdoc = [];
+          const arrDoc = [];
+          const data = {
+              noId: detailDis[i].id,
+              noAsset: detailDis[i].no_asset,
+          };
+          console.log(`masuk perulangan ${i}`);
+          await this.props.getDocumentDis(token, data, 'disposal', 'pengajuan');
+          const {dataDoc} = this.props.disposal;
+          for (let j = 0; j < dataDoc.length; j++) {
+              if (dataDoc[j].path !== null) {
+                  const arr = dataDoc[j];
+                  const stat = arr.status_dokumen;
+                  const cekLevel = stat !== null && stat !== '1' ? stat.split(',').reverse()[0].split(';')[0] : '';
+                  const cekStat = stat !== null && stat !== '1' ? stat.split(',').reverse()[0].split(';')[1] : '';
+                  if (cekLevel === ` level ${level}` && cekStat === ' status approve') {
+                      tempdoc.push(arr);
+                  } else {
+                      arrDoc.push(arr);
+                  }
+              }
+          }
+          const send = {
+              no_asset: detailDis[i].no_asset,
+              status_doc: arrDoc.length > 0 ? `${arrDoc.length} Dokumen Pending` : 'All Dokumen Done',
+          };
+          dataCek.push(send);
+        }
+        this.setState({dataDocCek: dataCek, isLoading: false});
         if ((level === '5' || level === '9') && (detailDis[0].tgl_disposalfisik === null || detailDis[0].tgl_disposalfisik === 'null' || detailDis[0].tgl_disposalfisik === '')) {
             this.openDetail();
             // this.openModalDate();
@@ -353,6 +388,46 @@ class Disposal extends Component {
     this.setState({realApp: finalApp.reverse()});
     this.setState({loading: false});
   }
+
+  prosesAfterClose = async () => {
+      this.setState({isLoading: true});
+      const {dataUser, token} = this.props.auth;
+      const level = dataUser.user_level.toString();
+      const { detailData, dataDocCek } = this.state;
+      const data = {
+          noId: detailData.id,
+          noAsset: detailData.no_asset,
+      };
+      await this.props.getDocumentDis(token, data, 'disposal', 'pengajuan');
+      const {dataDoc} = this.props.disposal;
+      const tempdoc = [];
+      const arrDoc = [];
+      for (let j = 0; j < dataDoc.length; j++) {
+        if (dataDoc[j].path !== null) {
+          const arr = dataDoc[j];
+          const stat = arr.status_dokumen;
+          const cekLevel = stat !== null && stat !== '1' ? stat.split(',').reverse()[0].split(';')[0] : '';
+          const cekStat = stat !== null && stat !== '1' ? stat.split(',').reverse()[0].split(';')[1] : '';
+          if (cekLevel === ` level ${level}` && cekStat === ' status approve') {
+            tempdoc.push(arr);
+          } else {
+            arrDoc.push(arr);
+          }
+        }
+      }
+      const send = {
+          no_asset: detailData.no_asset,
+          status_doc: arrDoc.length > 0 ? `${arrDoc.length} Dokumen Pending` : 'All Dokumen Done',
+      };
+
+      const newDataDocCek = dataDocCek.map(item =>
+          item.no_asset === send.no_asset
+              ? { ...item, ...send }
+              : item
+          );
+
+      this.setState({dataDocCek: newDataDocCek, isLoading: false});
+    }
 
   openDetail = () => {
     this.setState({openDetail: !this.state.openDetail});
@@ -467,6 +542,7 @@ class Disposal extends Component {
   }
 
   openDokumen = () => {
+    this.prosesAfterClose()
     this.setState({ modalDokumen: !this.state.modalDokumen });
   }
 
@@ -712,7 +788,7 @@ class Disposal extends Component {
 
 
   render() {
-    const {time1, time2, showDateFrom, showDateTo, filter, newDis, detailData, loading, realApp, listMut, listStat, tipeEmail, dataRej, total} = this.state;
+    const {time1, time2, showDateFrom, showDateTo, filter, newDis, detailData, loading, realApp, listMut, listStat, tipeEmail, dataRej, total, dataDocCek} = this.state;
 
     const loadingDepo = this.props.depo.isLoading;
     const loadingDisposal = this.props.disposal.isLoading;
@@ -721,7 +797,8 @@ class Disposal extends Component {
     const loadingNewnotif = this.props.newnotif.isLoading;
     const loadingDokumen = this.props.dokumen.isLoading;
     const loadingSetuju = this.props.setuju.isLoading;
-    const loadingAll = loadingDepo || loadingSetuju || loadingDisposal || loadingUser || loadingTempmail || loadingNewnotif || loadingDokumen || loading;
+    const loadingState = this.state.isLoading;
+    const loadingAll = loadingState || loadingDepo || loadingSetuju || loadingDisposal || loadingUser || loadingTempmail || loadingNewnotif || loadingDokumen || loading;
 
     const { dataDis, noDis, dataDoc, detailDis, statusList, dataReason} = this.props.disposal;
 
@@ -884,8 +961,12 @@ class Disposal extends Component {
                 ]}
               >
                 <View style={styles.row}>
-                  <Ionicons name="location-outline" size={18} color="#555" />
-                  <Text style={styles.cardText}>Area: {item.area}</Text>
+                  {parseInt(item.nilai_jual) === 0 ? (
+                    <MaterialIcons name="delete" size={18} color="#555" />
+                  ) : (
+                    <MaterialIcons name="attach-money" size={18} color="#555" />
+                  )}
+                  <Text style={[styles.cardText, { textTransform: 'uppercase' }]}>{item.type_disposal}{item.type_disposal === 'special' ? `-${item.type_special}` : ''}</Text>
                   <View style={styles.statusBadge}>
                     <Text style={styles.statusText}>
                       {statusList.find(x => x.status_form === item.status_form)?.title || ''}
@@ -895,7 +976,7 @@ class Disposal extends Component {
 
                 <View style={styles.row}>
                   <Ionicons name="location-outline" size={18} color="#555" />
-                  <Text style={styles.cardText}>Kode Area: {item.kode_plant}</Text>
+                  <Text style={styles.cardText}>Area: {item.area}-{item.kode_plant}</Text>
                 </View>
 
                 <View style={styles.row}>
@@ -999,6 +1080,11 @@ class Disposal extends Component {
                     <View style={styles.assetRowModal}>
                       {/* <Text style={styles.assetLabelModal}>Keterangan:</Text> */}
                       <Text style={[styles.assetValueModal, { marginVertical: 10 }]}>{item.keterangan}</Text>
+                    </View>
+                    <View style={styles.assetRowModal}>
+                      <Text style={[styles.assetValueModal, { marginVertical: 10 }]}>
+                        {dataDocCek.find(x => x.no_asset === item.no_asset)?.status_doc}
+                      </Text>
                     </View>
                   </TouchableOpacity>
                   <TouchableOpacity

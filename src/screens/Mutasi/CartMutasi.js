@@ -123,7 +123,7 @@ class CartMutasi extends Component {
     await this.props.getCart(token);
     await this.props.getDetailDepo(token, 1);
     const { dataAsset } = this.props.asset;
-    this.setState({assetState: dataAsset});
+    this.setState({assetState: dataAsset.filter(x => (x.status === null))});
     this.prepareSelect();
     this.setState({limit: 1000});
   }
@@ -249,7 +249,7 @@ class CartMutasi extends Component {
       (x.nama_asset.toLowerCase().includes(searchAsset.toLowerCase())) ||
       (x.no_asset.toLowerCase().includes(searchAsset.toLowerCase()))
     );
-    this.setState({assetState: searchAsset === '' ? dataAsset : cekFilter});
+    this.setState({assetState: searchAsset === '' ? dataAsset.filter(x => (x.status === null)) : cekFilter.filter(x => (x.status === null))});
   }
 
   handleBarcodeScan = async (scanResult) => {
@@ -362,7 +362,7 @@ class CartMutasi extends Component {
                 await this.props.getAsset(token, limit, search, page.currentPage, 'mutasi');
                 await this.props.getCart(token);
                 const { dataAsset } = this.props.asset;
-                this.setState({assetState: dataAsset});
+                this.setState({assetState: dataAsset.filter(x => (x.status === null))});
                 this.toggleModal();
                 this.setState({confirm: 'add'});
                 this.openConfirm();
@@ -385,7 +385,7 @@ class CartMutasi extends Component {
           await this.props.getAsset(token, limit, search, page.currentPage, 'mutasi');
           await this.props.getCart(token);
           const { dataAsset } = this.props.asset;
-          this.setState({assetState: dataAsset});
+          this.setState({assetState: dataAsset.filter(x => (x.status === null))});
           this.toggleModal();
           this.setState({confirm: 'add'});
           this.openConfirm();
@@ -423,7 +423,7 @@ class CartMutasi extends Component {
     await this.props.getCart(token);
     await this.props.getAsset(token, limit, search, page.currentPage, 'mutasi');
     const { dataAsset } = this.props.asset;
-    this.setState({assetState: dataAsset});
+    this.setState({assetState: dataAsset.filter(x => (x.status === null))});
     this.openDelete();
     this.setState({confirm: 'delete'});
     this.openConfirm();
@@ -902,20 +902,6 @@ class CartMutasi extends Component {
 
               <View style={styles.formGroupDetail}>
                 <Text style={styles.labelDetail}>Area Tujuan :</Text>
-                {/* <View style={styles.pickerWrapperDetail}>
-                  <Picker
-                    selectedValue={`${this.state.area}`}
-                    style={styles.pickerDetail}
-                    onValueChange={(itemValue) => this.chooseDepo(itemValue)}
-                  >
-                    <Picker.Item label="Select..." value="Select" />
-                    {dataDepo.length > 0 && dataDepo.map(item => {
-                      return (
-                        <Picker.Item label={`${item.kode_plant}-${item.nama_area}`} value={`${item.kode_plant}-${item.nama_area}`} />
-                      );
-                    })}
-                  </Picker>
-                </View> */}
                 <TouchableOpacity style={styles.inputDetail} onPress={this.openArea}>
                   <Text>{this.state.area === '' ? 'Select...' : this.state.area}</Text>
                 </TouchableOpacity>

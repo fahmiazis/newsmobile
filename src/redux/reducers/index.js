@@ -28,6 +28,8 @@ import newnotif from './newnotif';
 import dashboard from './dashboard';
 import apk from './apk';
 import asset_stock from './asset_stock';
+import setting_disposal from './setting_disposal';
+import status_stock from './status_stock';
 
 export default combineReducers({
   auth,
@@ -57,4 +59,6 @@ export default combineReducers({
   dashboard,
   apk,
   asset_stock,
+  setting_disposal,
+  status_stock,
 });

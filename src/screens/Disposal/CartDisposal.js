@@ -11,6 +11,7 @@ import { RNCamera } from 'react-native-camera';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import IconAwe from 'react-native-vector-icons/FontAwesome';
 import IconMateri from 'react-native-vector-icons/MaterialIcons';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Modal from 'react-native-modal';
@@ -22,6 +23,7 @@ import disposal from '../../redux/actions/disposal';
 import tempmail from '../../redux/actions/tempmail';
 import newnotif from '../../redux/actions/newnotif';
 import asset from '../../redux/actions/asset';
+import setting_disposal from '../../redux/actions/setting_disposal';
 
 import blankImg from '../../assets/blank.png';
 import placeholder from '../../assets/placeholder.png';
@@ -80,6 +82,8 @@ class CartDisposal extends Component {
       assetState: [],
       searchAsset: '',
       onSearch: false,
+      dataAdd: {},
+      modalType: false,
     };
   }
 
@@ -119,10 +123,11 @@ class CartDisposal extends Component {
     const limit = value === undefined ? this.state.limit : value.limit;
     await this.props.getAsset(token, limit, search, page.currentPage, 'disposal');
     await this.props.getCartDisposal(token);
+    await this.props.getAllSettingDisposal(token);
     // await this.props.getDetailDepo(token, 1);
     // this.prepareSelect();
     const { dataAsset } = this.props.asset;
-    this.setState({assetState: dataAsset});
+    this.setState({assetState: dataAsset.filter(x => (x.status === null))});
     this.setState({limit: 1000});
   }
 
@@ -271,21 +276,31 @@ class CartDisposal extends Component {
         </Text>
       ) : (
         <Text style={styles.detailTextCard}>
-          Tipe: {item.nilai_jual === 0 || item.nilai_jual === '0' ? 'Pemusnahan' : 'Penjualan'}
+          Tipe: {item.type_disposal}{item.type_disposal === 'special' ? `-${item.type_special}` : ''}
         </Text>
       )}
       {this.state.openList ? (
         parseInt(item.status) === 1 || parseInt(item.status) === 11 ? (
           <View style={styles.footerModal} />
         ) : (
-          <View style={styles.footerModal}>
-            <TouchableOpacity style={[styles.buttonItem, styles.btnColorApprove]} onPress={() => this.addSell(item)}>
-              <Text style={styles.buttonTextItem}>Sell</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.buttonItem, styles.btnColorReject]} onPress={() => this.addDisposal(item)}>
-              <Text style={styles.buttonTextItem}>Dispose</Text>
-            </TouchableOpacity>
-          </View>
+          <>
+            <View style={styles.footerModal}>
+              <TouchableOpacity style={[styles.buttonItem, styles.btnColorApprove]} onPress={() => this.addDisposal(item, 'sell')}>
+                <Text style={styles.buttonTextItem}>Sell</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.buttonItem, styles.btnColorReject]} onPress={() => this.addDisposal(item, 'dispose')}>
+                <Text style={styles.buttonTextItem}>Dispose</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.footerModal}>
+              <TouchableOpacity style={[styles.buttonItem, styles.btnColorTrack]} onPress={() => this.addDisposal(item, 'auction')}>
+                <Text style={styles.buttonTextItem}>Auction</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.buttonItem, styles.btnColorProses]} onPress={() => this.prosesOpenType(item)}>
+                <Text style={styles.buttonTextItem}>Special</Text>
+              </TouchableOpacity>
+            </View>
+          </>
         )
       ) : (
         <View style={styles.footerModal}>
@@ -342,49 +357,6 @@ class CartDisposal extends Component {
     this.setState({ isModalVisible: !this.state.isModalVisible });
   };
 
-  prosesAddDisposal = async (val) => {
-    const {dataUser, token} = this.props.auth;
-    const level = dataUser.user_level.toString();
-    const { page } = this.props.asset;
-    const search =  '';
-    const limit = this.state.limit;
-    const {kode, detailData} = this.state;
-    if (kode === '') {
-        console.log('pilih tujuan depo');
-    } else {
-      const { dataCart } = this.props.disposal;
-      if (dataCart.length > 0) {
-        if (dataCart.find(item => item.kode_plant_rec === kode)) {
-            if (dataCart.find(item => item.kategori === detailData.kategori)) {
-                await this.props.addDisposal(token, detailData.no_asset, kode);
-                await this.props.getAsset(token, limit, search, page.currentPage, 'disposal');
-                await this.props.getCartDisposal(token);
-                const { dataAsset } = this.props.asset;
-                this.setState({assetState: dataAsset});
-                this.toggleModal();
-                this.setState({confirm: 'add'});
-                this.openConfirm();
-            } else {
-                this.setState({confirm: 'falseKat'});
-                this.openConfirm();
-            }
-        } else {
-            this.setState({confirm: 'falseAdd'});
-            this.openConfirm();
-        }
-      } else {
-          await this.props.addDisposal(token, detailData.no_asset, kode);
-          await this.props.getAsset(token, limit, search, page.currentPage, 'disposal');
-          await this.props.getCartDisposal(token);
-          const { dataAsset } = this.props.asset;
-          this.setState({assetState: dataAsset});
-          this.toggleModal();
-          this.setState({confirm: 'add'});
-          this.openConfirm();
-      }
-    }
-  }
-
   addSell = async (val) => {
     const {dataUser, token} = this.props.auth;
     const {dataCart} = this.props.disposal;
@@ -408,7 +380,7 @@ class CartDisposal extends Component {
     }
   }
 
-  addDisposal = async (val) => {
+  addDisposalOld = async (val) => {
     const {dataUser, token} = this.props.auth;
     const {dataCart} = this.props.disposal;
     const cek = dataCart.find(item => item.nilai_jual !== '0' && item.nilai_jual !== 0);
@@ -426,6 +398,52 @@ class CartDisposal extends Component {
       this.getDataAsset();
     }
   }
+
+  addDisposal = async (value, type, type_special) => {
+    const {dataUser, token} = this.props.auth;
+    const {dataCart} = this.props.disposal;
+    const cekData = [`${type}${type === 'special' ? `-${type_special}` : ''}`];
+    for (let i = 0; i < dataCart.length; i++) {
+      if (type === 'special') {
+        cekData.push(`${dataCart[i].type_disposal}-${dataCart[i].type_special}`);
+      } else {
+        cekData.push(dataCart[i].type_disposal);
+      }
+    }
+    const cekFinalAll = [...new Set(cekData)];
+    const cekKategori =  value.kategori ? ((value.kategori.toLowerCase() === 'it' || value.kategori.toLowerCase() === 'non it') ? true : false) : false;
+    if (cekFinalAll.length > 1) {
+      this.setState({confirm: 'falseAdd'});
+      this.openConfirm();
+    } else if (!cekKategori) {
+      this.setState({confirm: 'falseKategori'});
+      this.openConfirm();
+    } else {
+      const data = {
+        no: value.no_asset,
+        type: type,
+        type_special: type_special,
+      };
+      await this.props.addDisposal(token, data);
+      if (this.state.modalType) {
+        this.setState({dataAdd: {}});
+        this.openType();
+      }
+      this.setState({confirm: 'add'});
+      this.openConfirm();
+      this.getDataAsset();
+    }
+  }
+
+  prosesOpenType = (val) => {
+    this.setState({ dataAdd: val });
+    this.openType();
+  }
+
+  openType = () => {
+    this.setState({modalType: !this.state.modalType});
+  }
+
 
   prosesUpdateDisposal = async (val) => {
     const {dataUser, token} = this.props.auth;
@@ -583,6 +601,7 @@ class CartDisposal extends Component {
     const loadingAll = loadingDepo || loadingDisposal || loadingTempmail || loadingNewnotif || loadingDokumen || loading;
 
     const { dataDis, noDis, dataDoc, detailDis, statusList, dataCart, dataKet} = this.props.disposal;
+    const { allSettingDisposal } = this.props.setting_disposal;
     const {dataAsset} = this.props.asset;
     const { dataDepo } = this.props.depo;
 
@@ -1261,6 +1280,57 @@ class CartDisposal extends Component {
             </View>
           </View>
         </Modal>
+        <Modal
+          style={{ margin: 0 }}
+          isVisible={this.state.modalType}
+          animationIn="slideInUp"
+          animationOut="slideOutDown"
+          onBackdropPress={this.openType}
+          useNativeDriver={true}
+        >
+          <View style={styles.overlayModal}>
+            <View style={styles.popupContainerModalList}>
+
+              {/* Header */}
+              <View style={styles.headerContainerModal}>
+                <Text style={styles.headerTitleModal}>Select type special case</Text>
+              </View>
+
+              <View style={styles.rowCardSpecial}>
+                {allSettingDisposal !== undefined && allSettingDisposal.length > 0 && allSettingDisposal.map((item, index) => {
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      style={styles.cardSpecial}
+                      onPress={() => this.addDisposal(this.state.dataAdd, 'special', item.name)}
+                    >
+                      {item.flow === 'sell' ? (
+                        <MaterialIcons name="attach-money" size={80} />
+                      ) : (
+                        <MaterialIcons name="delete" size={80} />
+                      )}
+                      <View style={{ backgroundColor: '#F9FAFB', borderRadius: 10, padding: 6, width: '100%' }}>
+                        <Text style={{ fontSize: 10, fontWeight: 'bold', textAlign: 'center' }} numberOfLines={2}>
+                          {item.name}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Footer */}
+              <View style={styles.footerModal}>
+                <TouchableOpacity
+                  style={[styles.buttonModal, styles.btnColorSec]}
+                  onPress={() => this.openType()}
+                >
+                  <Text style={styles.buttonTextModal}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </>
     );
   }
@@ -1667,6 +1737,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 15,
   },
+  rowCardSpecial: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+  },
+  cardSpecial: {
+    width: '47%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 10,
+    alignItems: 'center',
+    elevation: 3,
+    marginBottom: 10,
+  },
   assetCard: {
     backgroundColor: '#fff',
     borderRadius: 16,
@@ -1696,6 +1781,24 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#111827',
     textAlign: 'center',
+  },
+  nameSpecialCard: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#111827',
+    textAlign: 'center',
+  },
+  userCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 10,
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    marginBottom: 10,
   },
   detailTextCard: {
     fontSize: 12,
@@ -1963,6 +2066,7 @@ const mapStateToProps = state => ({
     auth: state.auth,
     newnotif: state.newnotif,
     dokumen: state.dokumen,
+    setting_disposal: state.setting_disposal,
 });
 
 const mapDispatchToProps = {
@@ -1983,6 +2087,7 @@ const mapDispatchToProps = {
     sendEmail: tempmail.sendEmail,
     addNewNotif: newnotif.addNewNotif,
     getApproveDisposal: disposal.getApproveDisposal,
+    getAllSettingDisposal: setting_disposal.getAllSettingDisposal,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(CartDisposal);

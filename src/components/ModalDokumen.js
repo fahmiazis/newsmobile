@@ -9,6 +9,8 @@ import {
   CheckBox,
   Alert,
   ActivityIndicator,
+  TextInput,
+  Dimensions,
 } from 'react-native';
 import { connect } from 'react-redux';
 import pengadaan from '../redux/actions/pengadaan';
@@ -25,6 +27,8 @@ import DocumentPicker from 'react-native-document-picker';
 import Modal from 'react-native-modal';
 import {API_URL} from '@env';
 
+const screenWidth = Dimensions.get('window').width;
+
 class ModalDokumen extends Component {
   constructor(props) {
     super(props);
@@ -39,6 +43,10 @@ class ModalDokumen extends Component {
       pageNumbers: {},
       idDoc: 0,
       modalReject: false,
+      doc_name: '',
+      modalAdd: false,
+      doc_file: null,
+      modalDelete: false,
     };
   }
 
@@ -72,22 +80,39 @@ class ModalDokumen extends Component {
   };
 
   docApp = (val) => {
-        const { cekDoc } = this.state;
-        cekDoc.push(val);
-        this.setState({ cekDoc: cekDoc });
+    const { cekDoc } = this.state;
+    const { arrDoc } = this.props.parDoc;
+    if (val === 'all') {
+        const data = [];
+        for (let i = 0; i < arrDoc.length; i++) {
+            if (arrDoc[i].path !== null) {
+                data.push(arrDoc[i].id);
+            }
+        }
+        this.setState({cekDoc: data});
+    } else {
+      cekDoc.push(val);
+      this.setState({ cekDoc: cekDoc });
     }
+  }
 
   docRej = (val) => {
     const { cekDoc } = this.state;
-    const data = [];
-    for (let i = 0; i < cekDoc.length; i++) {
-        if (cekDoc[i] === val) {
-            data.push();
-        } else {
-            data.push(cekDoc[i]);
-        }
+
+    if (val === 'all') {
+      const data = [];
+      this.setState({cekDoc: data});
+    } else {
+      const data = [];
+      for (let i = 0; i < cekDoc.length; i++) {
+          if (cekDoc[i] === val) {
+              data.push();
+          } else {
+              data.push(cekDoc[i]);
+          }
+      }
+      this.setState({ cekDoc: data });
     }
-    this.setState({ cekDoc: data });
   }
 
   toggleExpand = (id) => {
@@ -125,7 +150,7 @@ class ModalDokumen extends Component {
       const { arrDoc } = this.props.parDoc;
       const { cekDoc } = this.state;
       const selectedDocs = arrDoc.filter((doc) => cekDoc.find(x => x === doc.id) !== undefined);
-      
+
       if (selectedDocs.length === 0) {
         Alert.alert('Error', 'Pilih minimal 1 dokumen');
         return;
@@ -136,7 +161,7 @@ class ModalDokumen extends Component {
       // 1. Buat folder temp dengan timestamp (avoid conflict)
       const timestamp = Date.now();
       const downloadDir = `${RNFS.DownloadDirectoryPath}/tempDocs_${timestamp}`;
-      
+
       // Pastikan folder dibuat dengan await
       await RNFS.mkdir(downloadDir);
 
@@ -157,12 +182,12 @@ class ModalDokumen extends Component {
 
       // Tunggu semua download selesai
       const filePaths = await Promise.all(downloadPromises);
-      
+
       // 3. Verifikasi file ada sebelum zip
       const filesExist = await Promise.all(
         filePaths.map(path => RNFS.exists(path))
       );
-      
+
       if (!filesExist.every(exists => exists)) {
         throw new Error('Some files failed to download');
       }
@@ -186,7 +211,7 @@ class ModalDokumen extends Component {
         [{ text: 'Tutup' }],
         { cancelable: true }
       );
-      
+
     } catch (error) {
       console.log('Download/Zip error:', error);
       Alert.alert('Error', `Gagal mendownload atau mengompres file: ${error.message}`);
@@ -246,7 +271,7 @@ class ModalDokumen extends Component {
               noAsset: detailForm.no_asset,
           };
           const stat = detailForm.status_form;
-          const menu = stat === 26 ? 'purch' : 'pengajuan' 
+          const menu = stat === 26 ? 'purch' : 'pengajuan';
           await this.props.getDocumentDis(token, send, 'disposal', menu);
         } else if (tipe === 'persetujuan disposal') {
           const send = {
@@ -393,11 +418,11 @@ class ModalDokumen extends Component {
     // this.openModalAppDoc()
   }
 
-  approveDocZip = async (val) => {
+  approveDocZipOld = async (val) => {
       const {dataUser, token} = this.props.auth;
       const level = dataUser.user_level;
       const dataId = {
-          list: this.state.dataZip,
+          list: this.state.cekDoc,
       };
       const {noDoc, tipe, noTrans, filter, detailForm} = this.props.parDoc;
       const {idDoc} = this.state;
@@ -463,6 +488,77 @@ class ModalDokumen extends Component {
 
   }
 
+  approveDocZip = async (val) => {
+        const {dataUser, token} = this.props.auth;
+        const send = {
+            list: this.state.cekDoc,
+        };
+        const {noDoc, tipe, noTrans, filter, detailForm} = this.props.parDoc;
+        const {idDoc} = this.state;
+        const tempno = {
+            no: noDoc,
+            jenis: tipe,
+        };
+        await this.props.approveDokumen(token, idDoc, send);
+        await this.props.getDokumen(token, tempno);
+        if (noDoc === noTrans) {
+            if (tipe === 'pengadaan') {
+                await this.props.getDocumentIo(token, noDoc);
+            } else {
+                await this.props.getDetailMutasi(token, noDoc);
+                await this.props.getDocumentMut(token, noDoc, noDoc);
+            }
+
+            // if (val.type === 'show') {
+            //     this.openModalPdf()
+            //     this.collDoc(val.id)
+            // } else {
+            //     this.collDoc(val.id)
+            // }
+        } else if (tipe === 'disposal') {
+            const data = {
+                noId: detailForm.id,
+                noAsset: detailForm.no_asset,
+            };
+            await this.props.getDocumentDis(token, data, 'disposal', 'pengajuan');
+        } else if (tipe === 'eksekusi disposal') {
+            const data = {
+                noId: detailForm.id,
+                noAsset: detailForm.no_asset,
+            };
+            const tipeDis = detailForm.nilai_jual === '0' ? 'dispose' : 'sell';
+            await this.props.getDocumentDis(token, data, 'disposal', tipeDis, detailForm.npwp);
+        }  else if (tipe === 'tax disposal') {
+            const data = {
+                noId: detailForm.id,
+                noAsset: detailForm.no_asset,
+            };
+            await this.props.getDocumentDis(token, data, 'disposal', 'tax');
+        } else if (tipe === 'finance disposal') {
+            const data = {
+                noId: detailForm.id,
+                noAsset: detailForm.no_asset,
+            };
+            await this.props.getDocumentDis(token, data, 'disposal', 'finance');
+        } else {
+            await this.props.getDocCart(token, noDoc);
+            // if (val.type === 'show') {
+            //     this.openModalPdf()
+            //     this.collDoc(val.id)
+            // } else {
+            //     this.collDoc(val.id)
+            // }
+        }
+
+        this.props.onClose();
+
+        // this.setState({confirm: 'isAppDoc'})
+        // this.openConfirm()
+
+        // this.openModalAppDoc()
+
+    }
+
   rejectDoc = async () => {
     const {dataUser, token} = this.props.auth;
     const level = dataUser.user_level;
@@ -527,7 +623,7 @@ class ModalDokumen extends Component {
         jenis: tipe,
     };
     const data = {
-        list: this.state.dataZip,
+        list: this.state.cekDoc,
     };
     await this.props.rejectDokumen(token, idDoc, data);
     await this.props.getDokumen(token, tempno);
@@ -547,13 +643,80 @@ class ModalDokumen extends Component {
   }
 
   openReject = () => {
-    this.setState({modalReject: !this.state.modalReject})
+    this.setState({modalReject: !this.state.modalReject});
+  }
+
+  openAdd = () => {
+    this.setState({doc_file: null, doc_name: ''});
+    this.setState({modalAdd: !this.state.modalAdd});
+  }
+
+  selectAddDokumen = async () => {
+    const res = await DocumentPicker.pick({
+        type: [
+          DocumentPicker.types.pdf,
+          'application/vnd.ms-excel', // xls
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
+          'application/zip', // zip
+          'application/x-rar-compressed', // rar
+        ],
+      });
+
+      const file = res; // ambil file pertama
+      const { size, type, name, uri } = file;
+      console.log(name);
+
+      if (size >= this.state.limImage) {
+        this.setState({ errMsg: 'Maximum upload size 20 MB' });
+        Alert.alert('Error', 'Maximum upload size 20 MB');
+      } else {
+        this.setState({doc_file: file});
+      }
+  }
+
+  prosesAddDokumen = async () => {
+    const { token } = this.props.auth;
+    const { doc_name, doc_file } = this.state;
+    const { type, name, uri } = doc_file;
+    const { detailForm } = this.props.parDoc;
+    const data = new FormData();
+    data.append('document', {
+      uri,
+      type,
+      name,
+    });
+    data.append('name', doc_name);
+    data.append('id', detailForm.id);
+    await this.props.addDokumenUser(token, data);
+    const send = {
+        noId: detailForm.id,
+        noAsset: detailForm.no_asset,
+    };
+    await this.props.getDocumentDis(token, send, 'disposal', 'pengajuan');
+    this.openAdd();
+  }
+
+  openDelete = () => {
+    this.setState({modalDelete: !this.state.modalDelete});
+  }
+
+  prosesDeleteDokumen = async () => {
+    const { token } = this.props.auth;
+    const { idDoc } = this.state;
+    const { detailForm } = this.props.parDoc;
+    await this.props.deleteDokumenUser(token, idDoc);
+    const send = {
+        noId: detailForm.id,
+        noAsset: detailForm.no_asset,
+    };
+    await this.props.getDocumentDis(token, send, 'disposal', 'pengajuan');
+    this.openDelete();
   }
 
   render() {
     const { documents, loading, cekDoc, dataColl, pageNumbers } = this.state;
     const { handleClose, parDoc } = this.props;
-    const { arrDoc, proses } = parDoc;
+    const { arrDoc, proses, tipe, detailForm } = parDoc;
 
     const {dataUser, token} = this.props.auth;
     const level = dataUser.user_level;
@@ -562,29 +725,45 @@ class ModalDokumen extends Component {
       <>
       <View style={styles.modalContainer}>
         <Text style={styles.title}>Kelengkapan Dokumen</Text>
-        {/* <ScrollView> */}
-          {/* {documents.map((doc) => (
-            <View key={doc.id} style={styles.docContainer}>
-              <View style={styles.row}>
-                <CheckBox
-                  value={doc.selected}
-                  onValueChange={() => this.toggleSelect(doc.id)}
-                />
-                <Text style={styles.docName}>{doc.name}</Text>
-                <TouchableOpacity onPress={() => this.toggleExpand(doc.id)}>
-                  <Text style={styles.expandBtn}>
-                    {doc.expanded ? 'Hide' : 'Expand'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+        {proses !== 'upload' && (
+          <View style={styles.row}>
+              <CheckBox
+                style={{ margin: 0 }}
+                value={cekDoc.length === arrDoc.length ? true : false}
+                onValueChange={cekDoc.length === arrDoc.length ? () => this.docRej('all') : () => this.docApp('all')}
+              />
+              <Text style={styles.docName}>Checklist All</Text>
+          </View>
+        )}
+        {proses === 'upload' && tipe === 'disposal' && detailForm.type_disposal === 'special' && (
+          <View style={styles.row}>
+              <TouchableOpacity
+                style={[styles.buttonModal, styles.btnColorApprove]}
+                onPress={() => this.openAdd()}
+              >
+                <Text style={styles.buttonTextModal}>Add Dokumen</Text>
+              </TouchableOpacity>
+          </View>
+        )}
 
-              {doc.expanded && (
-                <View style={{ height: 300, marginTop: 10 }}>
-                  <Pdf source={{ uri: doc.url, cache: true }} style={{ flex: 1 }} />
-                </View>
-              )}
-            </View>
-          ))} */}
+        <View style={[styles.row, styles.marginBtn, { marginBottom: 30 }]}>
+          {proses === 'approval' && (
+            <>
+              <TouchableOpacity
+                style={[styles.buttonModal, styles.btnColorApprove]}
+                onPress={() => this.approveDocZip({type: 'direct', idDoc: 'all'})}
+              >
+                <Text style={styles.buttonTextModal}>Approve All</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.buttonModal, styles.btnColorReject]}
+                onPress={() => {this.rejectDocZip();}}
+              >
+                <Text style={styles.buttonTextModal}>Reject All</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
           {arrDoc.map((doc) => (
             <View key={doc.id} style={styles.docContainer}>
               <View style={styles.row}>
@@ -641,18 +820,28 @@ class ModalDokumen extends Component {
                     >
                       <Text style={styles.buttonTextModal}>Approve</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={[styles.buttonModal, styles.btnColorReject]}
-                      onPress={() => {this.setState({idDoc: doc.id}); this.openReject()}}
+                      onPress={() => {this.setState({idDoc: doc.id}); this.openReject();}}
                     >
                       <Text style={styles.buttonTextModal}>Reject</Text>
                     </TouchableOpacity>
                   </>
                 )}
                 {proses === 'upload' && (
-                  <TouchableOpacity onPress={() => this.onChangeUpload(doc)} style={[styles.buttonModal, styles.btnColorProses]}>
-                    <Text style={styles.buttonTextModal}>Upload</Text>
-                  </TouchableOpacity>
+                  <>
+                    <TouchableOpacity onPress={() => this.onChangeUpload(doc)} style={[styles.buttonModal, styles.btnColorProses]}>
+                      <Text style={styles.buttonTextModal}>Upload</Text>
+                    </TouchableOpacity>
+                    {tipe === 'disposal' && detailForm.type_disposal === 'special' && !doc.status_upload && (
+                      <TouchableOpacity
+                        style={[styles.buttonModal, styles.btnColorReject]}
+                        onPress={() => {this.setState({idDoc: doc.id}); this.openDelete();}}
+                      >
+                        <Text style={styles.buttonTextModal}>Delete</Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
                 )}
               </View>
               <TouchableOpacity onPress={() => this.collDoc(doc.id)} style={[styles.row, styles.borderModal, styles.flexBtn]}>
@@ -762,6 +951,90 @@ class ModalDokumen extends Component {
                     <Text style={styles.buttonTextCard}>Ya</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.buttonDelete, styles.btnColorSec]} onPress={this.openReject}>
+                    <Text style={styles.buttonTextCard}>Tidak</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        style={{margin: 0}}
+        isVisible={this.state.modalAdd}
+        animationIn="slideInUp"
+        animationOut="slideOutDown"
+        // backdropOpacity={0.4}
+        onBackdropPress={this.openAdd}
+        useNativeDriver={true}
+      >
+        <View style={styles.modalContainerDetail}>
+          <ScrollView>
+            {/* Header */}
+            <Text style={styles.headerTextDetail}>Upload Dokumen</Text>
+            <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>Nama Dokumen :</Text>
+              <TextInput
+                style={styles.inputDetailAct}
+                value={this.state.doc_name}
+                onChangeText={(val) => this.setState({doc_name: val})}
+              />
+              {!this.state.doc_name && (
+                <Text style={styles.errorTextDetail}>Must be filled</Text>
+              )}
+            </View>
+            <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>Upload Dokumen :</Text>
+              <TouchableOpacity style={[styles.closeButtonDetail, styles.btnColorProses, styles.midText]} onPress={this.selectAddDokumen}>
+                <Text style={[styles.closeButtonTextDetail, styles.midText]}>Pilih Dokumen</Text>
+              </TouchableOpacity>
+              {!this.state.doc_file ? (
+                <Text style={styles.errorTextDetail}>Must be filled</Text>
+              ) : (
+                <Text style={styles.textInfo}>{this.state.doc_file.name}</Text>
+              )}
+            </View>
+            <View style={styles.footerModal}>
+              <View style={styles.rowGeneral}>
+                <TouchableOpacity
+                  style={[
+                    styles.addButtonDetail,
+                    (!this.state.doc_name || !this.state.doc_file) && { backgroundColor: '#9CA3AF' },
+                  ]}
+                  disabled={!this.state.doc_name || !this.state.doc_file}
+                  onPress={() => this.prosesAddDokumen()}
+                >
+                  <Text style={styles.addButtonTextDetail}>{'Save'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.closeButtonDetail} onPress={this.openAdd}>
+                  <Text style={styles.closeButtonTextDetail}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
+
+      <Modal
+        style={{margin: 0}}
+        isVisible={this.state.modalDelete}
+        animationIn="slideInUp"
+        animationOut="slideOutDown"
+        // backdropOpacity={0.4}
+        onBackdropPress={this.openDelete}
+        useNativeDriver={true}
+      >
+        <View style={styles.overlayModal}>
+          <View style={styles.popupContainerInfo}>
+            <ScrollView style={styles.scrollContentModal}>
+              <View style={styles.sectionInfo}>
+                <Text style={styles.sectionTitleInfo}>Anda yakin untuk Delete?</Text>
+                <View style={styles.sectionDelete}>
+                  <TouchableOpacity style={[styles.buttonDelete, styles.btnColorClose]} onPress={() => this.prosesDeleteDokumen()}>
+                    <Text style={styles.buttonTextCard}>Ya</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.buttonDelete, styles.btnColorSec]} onPress={this.openDelete}>
                     <Text style={styles.buttonTextCard}>Tidak</Text>
                   </TouchableOpacity>
                 </View>
@@ -960,6 +1233,146 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
   },
+
+  // modal detail
+  containerDetail: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  openButtonDetail: {
+    backgroundColor: '#EF4444',
+    padding: 12,
+    borderRadius: 8,
+  },
+  modalWrapperDetail: {
+    justifyContent: 'center',
+    margin: 0,
+  },
+  modalContainerDetail: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 20,
+    width: screenWidth * 0.9,
+    alignSelf: 'center',
+  },
+  headerTextDetail: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  assetNameTextDetail: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 20,
+  },
+  imageWrapperDetail: {
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  imageDetail: {
+    width: '100%',
+    height: 260,
+    resizeMode: 'contain',
+    borderRadius: 8,
+    // borderWidth: 1,
+    // borderColor: '#E5E7EB',
+  },
+  formGroupDetail: {
+    marginBottom: 15,
+  },
+  labelDetail: {
+    fontSize: 14,
+    color: '#374151',
+    marginBottom: 5,
+  },
+  inputDetail: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    padding: 10,
+    backgroundColor: '#9CA3AF',
+    color: '#111827',
+  },
+  inputDetailAct: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    padding: 10,
+    backgroundColor: '#fdfbfbff',
+    color: '#111827',
+  },
+  checkboxWrapperDetail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  checkboxDetail: {
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 6,
+    marginRight: 10,
+  },
+  checkboxActiveDetail: {
+    backgroundColor: '#E5E7EB',
+  },
+  pickerWrapperDetail: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+  },
+  pickerDetail: {
+    height: 40,
+  },
+  errorTextDetail: {
+    color: 'red',
+    fontSize: 12,
+    marginTop: 5,
+  },
+  textInfo: {
+    color: 'black',
+    fontSize: 12,
+    marginTop: 5,
+  },
+  buttonWrapperDetail: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 20,
+  },
+  addButtonDetail: {
+    backgroundColor: '#10B981',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginRight: 10,
+  },
+  addButtonTextDetail: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  closeButtonDetail: {
+    backgroundColor: '#6B7280',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  closeButtonTextDetail: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+
+  footerModal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  rowGeneral: {
+    flexDirection: 'row',
+  },
+  midText: {
+    textAlign: 'center',
+  },
 });
 
 const mapStateToProps = (state) => ({
@@ -988,6 +1401,8 @@ const mapDispatchToProps = {
   getDocumentMut: mutasi.getDocumentMut,
   getDocumentDis: disposal.getDocumentDis,
   getDocumentStock: stock.getDocumentStock,
+  addDokumenUser: disposal.addDokumenUser,
+  deleteDokumenUser: disposal.deleteDokumenUser,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(ModalDokumen);

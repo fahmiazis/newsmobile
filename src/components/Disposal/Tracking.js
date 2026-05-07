@@ -33,7 +33,7 @@ class TrackingDisposal extends Component {
           status: 1,
           notStat: [],
           icon: 'send',
-          type: 'all',
+          type: ['all'],
         },
         {
           id: 2,
@@ -45,6 +45,7 @@ class TrackingDisposal extends Component {
             { name: 'Upload Dokumen oleh Purchasing', status: 1, icon: 'gear'},
             { name: 'Selesai', status: 1, icon: 'check'},
           ],
+          type: ['sell'],
         },
         {
           id: 3,
@@ -53,7 +54,7 @@ class TrackingDisposal extends Component {
           notStat: [26],
           icon: 'file-text',
           detail: 'approval',
-          type: 'all',
+          type: ['all'],
         },
         {
           id: 4,
@@ -62,7 +63,19 @@ class TrackingDisposal extends Component {
           notStat: [26, 9],
           icon: 'file-text',
           detail: 'approval',
-          type: 'all',
+          type: ['all'],
+        },
+        {
+          id: 2,
+          title: 'Proses Purchasing',
+          status: 1,
+          notStat: [26],
+          icon: 'gear',
+          detail: [
+            { name: 'Upload Dokumen oleh Purchasing', status: 1, icon: 'gear'},
+            { name: 'Selesai', status: 1, icon: 'check'},
+          ],
+          type: ['auction'],
         },
         {
           id: 5,
@@ -75,6 +88,7 @@ class TrackingDisposal extends Component {
             { name: 'Proses Eksekusi Tim Aset', status: 4, icon: 'gear'},
             { name: 'Selesai', status: 4, icon: 'check'},
           ],
+          type: ['all'],
         },
         {
           id: 6,
@@ -86,6 +100,7 @@ class TrackingDisposal extends Component {
             { name: 'Upload Dokumen oleh Tax', status: 5, icon: 'gear'},
             { name: 'Selesai', status: 5, icon: 'check'},
           ],
+          type: ['sell', 'auction', 'special-sell', 'incident'],
         },
         {
           id: 7,
@@ -97,6 +112,7 @@ class TrackingDisposal extends Component {
             { name: 'Upload Dokumen oleh Finance', status: 6, icon: 'gear'},
             { name: 'Selesai', status: 6, icon: 'check'},
           ],
+          type: ['sell', 'auction', 'special-sell', 'incident'],
         },
         {
           id: 8,
@@ -108,6 +124,7 @@ class TrackingDisposal extends Component {
             { name: 'Check Dokumen Tax and Finance Oleh Asset', status: 7, icon: 'file-text'},
             { name: 'Selesai', status: 7, icon: 'check'},
           ],
+          type: ['sell', 'auction', 'special-sell', 'incident'],
         },
         {
           id: 9,
@@ -115,6 +132,7 @@ class TrackingDisposal extends Component {
           status: 8,
           notStat: [26, 9, 15],
           icon: 'check',
+          type: ['all']
         },
       ],
       realApp: [],
@@ -271,7 +289,7 @@ class TrackingDisposal extends Component {
               contentContainerStyle={{paddingBottom: 30}}
               nestedScrollEnabled={true}>
 
-              {steps.map((step, index) => {
+              {steps.filter(x => x.type.find(y => y === (selectData.type_disposal === 'special' ? `special-${selectData.flow_disposal}` : selectData.type_disposal) || y === 'all')).map((step, index) => {
                 const isActive = activeStep === step.id;
                 const isLastStep = index === steps.length - 1;
 

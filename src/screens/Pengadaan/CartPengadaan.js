@@ -23,6 +23,7 @@ import pengadaan from '../../redux/actions/pengadaan';
 import tempmail from '../../redux/actions/tempmail';
 import newnotif from '../../redux/actions/newnotif';
 import asset from '../../redux/actions/asset';
+import user from '../../redux/actions/user';
 
 import blankImg from '../../assets/blank.png';
 import placeholder from '../../assets/placeholder.png';
@@ -86,18 +87,37 @@ class CartPengadaan extends Component {
       akta: null,
       start: null,
       end: null,
-      noAjuan: '',
-      //
+      is_suplement: false,
       displayPrice: '',
       open: false,
       value: [],
-      items: [
-        // { label: 'Apple', value: 'apple' },
-        // { label: 'Banana', value: 'banana' },
-        // { label: 'Mango', value: 'mango' },
-        // { label: 'Orange', value: 'orange' },
-        // { label: 'Watermelon', value: 'watermelon' },
-      ],
+      items: [],
+      noAjuan: '',
+      showOptions: false,
+      listNoIo: [],
+      asset_ref: '',
+      listTemp: [],
+      showTemp: false,
+      openAssetRef: false,
+      modalType: false,
+      typeCost: '',
+      modalCost: false,
+      dataItem: [],
+      cost: '',
+      qty_detail: '',
+      nik: '',
+      openModalIo: false,
+      total: 0,
+      listCost: [],
+      cost_center: '',
+      modalDetailItem: false,
+      openArea: false,
+      dataArea: [],
+      searchArea: '',
+      pengadaan_id: null,
+      typeModalDetail: '',
+      indexItem: null,
+      idDetailItem: null,
     };
   }
 
@@ -131,9 +151,8 @@ class CartPengadaan extends Component {
   }
 
   chooseDepo = (val) => {
-    const data = val.split('-')[0];
-    this.setState({kode: data, area: val});
-    console.log(val);
+    this.setState({cost_center: val});
+    this.openArea();
   }
 
   async componentDidMount() {
@@ -154,6 +173,11 @@ class CartPengadaan extends Component {
     const limit = value === undefined ? this.state.limit : value.limit;
     await this.props.getCart(token);
     await this.props.getDetailDepo(token, 1);
+    if (dataUser.user_level !== 5) {
+      await this.props.getDepo(token, 1000, '');
+      const {dataDepo} = this.props.depo;
+      this.setState({dataArea: dataDepo});
+    }
     this.setState({limit: 1000});
   }
 
@@ -252,19 +276,28 @@ class CartPengadaan extends Component {
     this.setState({modalDelete: !this.state.modalDelete});
   }
 
-  prosesOpenDetail = (val) => {
+  prosesOpenDetail = async (val) => {
     const detail = val.val;
-    if (detail.nama !== undefined) {
-      this.setState({
-        nama: detail.nama,
-        qty: detail.qty,
-        price: detail.price,
-        kategori: detail.kategori,
-        tipe: detail.tipe,
-        jenis: detail.jenis,
-        displayPrice: detail.price ? `Rp ${this.formatCurrency(detail.price)}` : '',
-      });
+    const {token} = this.props.auth;
+    if (val.type !== 'add') {
+      await this.props.getDetailItem(token, detail.id);
     }
+    const { dataDetail } = this.props.pengadaan;
+    this.setState({
+      nama: val.type === 'add' ? '' : detail.nama,
+      qty: val.type === 'add' ? '' : detail.qty,
+      price: val.type === 'add' ? '' : detail.price,
+      kategori: val.type === 'add' ? '' : detail.kategori,
+      tipe: val.type === 'add' ? '' : detail.tipe,
+      jenis: val.type === 'add' ? '' : detail.jenis,
+      displayPrice: val.type === 'add' ? '' : detail.price ? `Rp ${this.formatCurrency(detail.price)}` : '',
+      is_suplement: val.type === 'add' ? false : detail.is_suplement,
+      noAjuan: val.type === 'add' ? '' : detail.no_ref,
+      asset_ref: val.type === 'add' ? '' : detail.asset_ref,
+      listNoIo: val.type === 'add' ? [] : [{value: detail.no_ref, label: detail.no_ref}],
+      listTemp: val.type === 'add' ? [] : [{value: detail.asset_ref, label: detail.asset_ref, qty: detail.qty}],
+      dataItem: val.type === 'add' ? [] : dataDetail,
+    });
     this.setState({detailData: detail, typeModal: val.type});
     this.toggleModal();
   }
@@ -273,13 +306,241 @@ class CartPengadaan extends Component {
     this.setState({ isModalVisible: !this.state.isModalVisible });
   };
 
+  openType = () => {
+    this.setState({modalType: !this.state.modalType});
+  }
+
+  prosesOpenCost = (val) => {
+    this.setState({typeCost: val});
+    this.openCost();
+  }
+
+  openCost = () => {
+    this.setState({modalCost: !this.state.modalCost, dataItem: []});
+  }
+
+  prosesOpenDetailItem = (val, index) => {
+    this.setState({
+      pengadaan_id: val.pengadaan_id || null,
+      cost_center: val.cost_center,
+      nik: val.nik,
+      qty_detail: String(val.qty),
+      indexItem: index,
+      idDetailItem: val.id || null,
+    });
+    this.openModalDetail('update');
+  }
+
+  openModalDetail = (val) => {
+    this.setState({
+      modalDetailItem: !this.state.modalDetailItem,
+      typeModalDetail: val,
+    });
+
+    if (val !== 'update') {
+      this.setState({
+        cost_center: '',
+        qty_detail: '',
+      });
+    }
+  }
+
+  renderArea = ({ item }) => (
+    <TouchableOpacity style={[styles.areaCard]} onPress={() => this.chooseDepo(`${item.place_asset}-${item.cost_center}`)}>
+      <Text>{item.kode_plant}-{item.kode_dist}-{item.cost_center}-{item.place_asset}</Text>
+    </TouchableOpacity>
+  );
+
+  addItem = async () => {
+      const { cost_center, nik, qty_detail, pengadaan_id, qty } = this.state;
+      const data = {
+        cost_center: cost_center,
+        nik: nik,
+        qty: qty_detail,
+      };
+      const { dataItem } = this.state;
+      let total = parseInt(qty_detail);
+      const cekCost = [];
+      for (let i = 0; i < dataItem.length; i++) {
+        total += parseInt(dataItem[i].qty);
+        if (dataItem[i].cost_center === cost_center) {
+            cekCost.push(dataItem[i]);
+        }
+      }
+      if (!cost_center || !qty_detail || parseInt(qty_detail) === 0) {
+          this.setState({confirm: 'falseAddDetail'});
+          this.openConfirm();
+      } else if (total > parseInt(qty)) {
+          this.setState({confirm: 'falseQty'});
+          this.openConfirm();
+          this.setState({cost_center: '', qty_detail: ''});
+      } else if (cekCost.length > 0) {
+          this.setState({confirm: 'falseCost'});
+          this.openConfirm();
+          this.setState({cost_center: '', qty_detail: ''});
+      } else {
+        if (pengadaan_id) {
+          const send = {
+            idIo: pengadaan_id,
+            dataItem: [data],
+          };
+          const { token } = this.props.auth;
+          await this.props.addDetailItem(token, send);
+          await this.props.getDetailItem(token, pengadaan_id);
+          const { dataDetail } = this.props.pengadaan;
+          this.setState({dataItem: dataDetail,cost_center: '', qty_detail: ''});
+        } else {
+          this.setState({dataItem: [...dataItem, data],cost_center: '', qty_detail: ''});
+        }
+        this.openModalDetail();
+      }
+    }
+
+    updateItem = async (type) => {
+       const { dataItem, qty, qty_detail, pengadaan_id, indexItem, cost_center, nik, idDetailItem } = this.state;
+        const data = {
+            cost_center: cost_center,
+            nik: nik,
+            qty: qty_detail,
+        };
+        let total = parseInt(qty_detail);
+        const cekCost = [];
+        for (let i = 0; i < dataItem.length; i++) {
+            if (i !== parseInt(indexItem)) {
+                total += parseInt(dataItem[i].qty);
+                if (dataItem[i].cost_center === cost_center) {
+                    cekCost.push(dataItem[i]);
+                }
+            }
+        }
+        if (total > parseInt(qty)) {
+            this.setState({confirm: 'falseQty'});
+            this.openConfirm();
+            this.setState({cost_center: '', qty_detail: ''});
+        } else if (cekCost.length > 0) {
+            this.setState({confirm: 'falseCost'});
+            this.openConfirm();
+            this.setState({cost_center: '', qty_detail: ''});
+        } else {
+          if (pengadaan_id && type && type === 'save') {
+            const send = {
+              ...data,
+              idData: idDetailItem,
+              idIo: pengadaan_id,
+            };
+            const { token } = this.props.auth;
+            await this.props.updateDetailItem(token, send);
+            await this.props.getDetailItem(token, pengadaan_id);
+            const { dataDetail } = this.props.pengadaan;
+            this.setState({dataItem: dataDetail});
+            this.setState({confirm: 'update'});
+            this.openConfirm();
+          } else {
+            const newData = [];
+            for (let i = 0; i < dataItem.length; i++) {
+              if (i === parseInt(indexItem)) {
+                newData.push(data);
+              } else {
+                newData.push(dataItem[i]);
+              }
+            }
+            this.setState({dataItem: newData});
+            if (type && type === 'save') {
+              this.setState({confirm: 'update'});
+              this.openConfirm();
+            }
+          }
+        }
+
+    }
+
+    deleteDetail = async (val) => {
+        if (val.pengadaan_id) {
+            const { token } = this.props.auth;
+            await this.props.deleteDetailItem(token, val.id);
+            await this.props.getDetailItem(token, val.pengadaan_id);
+            const { dataDetail } = this.props.pengadaan;
+            this.setState({dataItem: dataDetail});
+        } else {
+            const { dataItem } = this.state;
+            const newData = dataItem.filter(x => x.cost_center !== val.cost_center);
+            this.setState({dataItem: newData});
+        }
+    }
+
+    saveAdd = async () => {
+      const {nama, price, qty, kategori, tipe, jenis, akta, start, end, is_suplement, dataItem} = this.state;
+      const cek = dataItem.filter(x => x.pengadaan_id);
+      if (cek.length === dataItem.length && cek.length !== 0) {
+          this.setState({confirm: 'update'});
+          this.openConfirm();
+      } else {
+        let cekQty = 0;
+        for (let i = 0; i < dataItem.length; i++) {
+          cekQty += parseInt(dataItem[i].qty);
+        }
+        if (cekQty !== parseInt(qty)) {
+          this.setState({confirm: 'falseQty'});
+          this.openConfirm();
+        } else {
+          const { token } = this.props.auth;
+          const {dataCart} = this.props.pengadaan;
+          const cek = [];
+          const cekName = [];
+          for (let i = 0; i < dataCart.length; i++) {
+            if (dataCart[i].kategori !== kategori || dataCart[i].tipe !== tipe || dataCart[i].jenis !== jenis) {
+              cek.push(1);
+            } else if (dataCart[i].nama.toLowerCase() === nama.toLowerCase()) {
+              cekName.push(dataCart[i]);
+            }
+          }
+
+          if (cek.length > 0) {
+              this.setState({confirm: 'falseAdd'});
+              this.openConfirm();
+          } else if (cekName.length > 0) {
+              this.setState({confirm: 'falseNameAdd'});
+              this.openConfirm();
+          } else {
+            const data = {
+              nama: nama,
+              price: price,
+              qty: qty,
+              kategori: kategori,
+              tipe: tipe,
+              jenis: jenis,
+              akta: akta,
+              start: start,
+              end: end,
+              no_ref: kategori === 'return' ? this.state.noAjuan : '',
+              type_ajuan: this.state.typeCost,
+              is_suplement: is_suplement,
+            };
+            await this.props.addCart(token, data);
+            const {detailCart} = this.props.pengadaan;
+            const send = {
+              idIo: detailCart.id,
+              dataItem,
+            };
+            await this.props.addDetailItem(token, send);
+            this.toggleModal();
+            this.getDataCart();
+            this.openCost();
+            this.openType();
+            this.setState({confirm: 'add'});
+            this.openConfirm();
+          }
+        }
+      }
+    }
+
   prosesAddPengadaan = async () => {
     const {dataUser, token} = this.props.auth;
     const level = dataUser.user_level.toString();
     const {dataCart} = this.props.pengadaan;
     const cek = [];
     const cekName = [];
-    const {nama, price, qty, kategori, tipe, jenis, akta, start, end, noAjuan} = this.state;
+    const {nama, price, qty, kategori, tipe, jenis, akta, start, end, noAjuan, is_suplement, asset_ref} = this.state;
     const data = {
       nama: nama,
       price: price,
@@ -290,7 +551,9 @@ class CartPengadaan extends Component {
       akta: akta,
       start: start,
       end: end,
-      no_ref: kategori === 'return' ? noAjuan : '',
+      is_suplement: is_suplement,
+      no_ref: kategori === 'return' || is_suplement ? noAjuan : '',
+      asset_ref: kategori === 'return' || is_suplement ? asset_ref : '',
     };
     for (let i = 0; i < dataCart.length; i++) {
         if (dataCart[i].kategori !== data.kategori || dataCart[i].tipe !== data.tipe || dataCart[i].jenis !== data.jenis) {
@@ -319,7 +582,7 @@ class CartPengadaan extends Component {
     const {detailData} = this.state;
     const cek = [];
     const cekName = [];
-    const {nama, price, qty, kategori, tipe, jenis, akta, start, end, noAjuan} = this.state;
+    const {nama, price, qty, kategori, tipe, jenis, akta, start, end, noAjuan, is_suplement, asset_ref} = this.state;
     const data = {
       nama: nama,
       price: price,
@@ -330,12 +593,14 @@ class CartPengadaan extends Component {
       akta: akta,
       start: start,
       end: end,
-      no_ref: kategori === 'return' ? noAjuan : '',
+      no_ref: kategori === 'return' || is_suplement ? noAjuan : '',
+      asset_ref: kategori === 'return' || is_suplement ? asset_ref : '',
+      is_suplement: is_suplement,
     };
     for (let i = 0; i < dataCart.length; i++) {
       if ((dataCart[i].kategori !== data.kategori || dataCart[i].tipe !== data.tipe || dataCart[i].jenis !== data.jenis) && dataCart.length > 1) {
         cek.push(1);
-      } else if (dataCart[i].nama.toLowerCase() === data.nama.toLowerCase()) {
+      } else if (dataCart[i].nama.toLowerCase() === data.nama.toLowerCase() && dataCart[i].id !== detailData.id) {
         cekName.push(dataCart[i]);
       }
     }
@@ -377,12 +642,13 @@ class CartPengadaan extends Component {
   }
 
   cekSubmit = async () => {
+    const {dataUser, token} = this.props.auth;
+    const level = dataUser.user_level;
+    await this.props.getCart(token);
     const { dataCart } = this.props.pengadaan;
     if (dataCart.length > 0) {
-      const {dataUser, token} = this.props.auth;
-      await this.props.getCart(token);
-      const { dataCart } = this.props.pengadaan;
       const cek = [];
+      const cekItem = [];
       for (let i = 0; i < dataCart.length; i++) {
           const doc = dataCart[i].doc;
           if (doc === null || doc === undefined || doc.length === 0) {
@@ -394,12 +660,30 @@ class CartPengadaan extends Component {
                   }
               }
           }
+
+          if (parseInt(level) !== 5 && dataCart[i].kategori !== 'return' && !dataCart[i].is_suplement) {
+                await this.props.getDetailItem(token, dataCart[i].id);
+                const {dataDetail} = this.props.pengadaan;
+                let total = 0;
+                for (let x = 0; x < dataDetail.length; x++) {
+                    total += parseInt(dataDetail[x].qty);
+                }
+
+                if (total !== parseInt(dataCart[i].qty)) {
+                    cekItem.push(dataCart[i]);
+                }
+            }
       }
+
+      console.log(cekItem)
       if (cek.length > 0) {
-          this.setState({confirm: 'rejSubmit'});
-          this.openConfirm();
+        this.setState({confirm: 'rejSubmit'});
+        this.openConfirm();
+      } else if (cekItem.length > 0) {
+        this.setState({confirm: 'falseQty'});
+        this.openConfirm();
       } else {
-          this.openSubmit();
+        this.openSubmit();
       }
     } else {
       this.setState({confirm: 'submitAdd'});
@@ -425,81 +709,178 @@ class CartPengadaan extends Component {
   }
 
   prepSendEmail = async () => {
-        const {dataCart, noIo} = this.props.pengadaan;
-        const {dataUser, token} = this.props.auth;
-        // const tipe = dataCart[0].kategori === 'return' ? 'approve' : 'submit'
-        const tipe = 'submit';
-        const tempno = {
-            no: noIo,
-            kode: dataCart[0].kode_plant,
-            jenis: 'pengadaan',
-            tipe: tipe,
-            menu: 'Pengajuan Pengadaan Asset (Pengadaan asset)',
-        };
-        await this.props.getDetail(token, noIo);
-        await this.props.getApproveIo(token, noIo);
-        await this.props.getDraftEmail(token, tempno);
-        this.openDraftEmail();
-    }
+    const {dataCart, noIo} = this.props.pengadaan;
+    const {dataUser, token} = this.props.auth;
+    // const tipe = dataCart[0].kategori === 'return' ? 'approve' : 'submit'
+    const tipe = 'submit';
+    const tempno = {
+        no: noIo,
+        kode: dataCart[0].kode_plant,
+        jenis: 'pengadaan',
+        tipe: tipe,
+        menu: 'Pengajuan Pengadaan Asset (Pengadaan asset)',
+    };
+    await this.props.getDetail(token, noIo);
+    await this.props.getApproveIo(token, noIo);
+    await this.props.getDraftEmail(token, tempno);
+    this.openDraftEmail();
+  }
 
-    openDraftEmail = () => {
-        this.setState({openDraft: !this.state.openDraft});
-    }
+  openDraftEmail = () => {
+    this.setState({openDraft: !this.state.openDraft});
+  }
 
-    submitFinal = async () => {
-      const {dataUser, token} = this.props.auth;
-      const { noIo, dataCart } = this.props.pengadaan;
-        const { draftEmail } = this.props.tempmail;
-        const { message, subject, alasan } = this.state;
-        const data = {
-            no: noIo,
-        };
-        const cc = draftEmail.cc;
-        const tempcc = [];
-        for (let i = 0; i < cc.length; i++) {
-            tempcc.push(cc[i].email);
-        }
-        const sendMail = {
-          draft: draftEmail,
-          nameTo: draftEmail.to.fullname,
-          to: draftEmail.to.email,
-          cc: tempcc.toString(),
-          message: message,
-          subject: subject,
-          no: noIo,
-          tipe: 'pengadaan',
-          menu: 'pengadaan asset',
-          proses: 'submit',
-          route: 'pengadaan',
-        };
-        const dataReason = {
-          alasan: alasan,
-        };
-        if (dataCart[0].kategori === 'return') {
-          await this.props.submitIoFinal(token, data);
-          await this.props.updateReason(token, noIo, dataReason);
-          await this.props.sendEmail(token, sendMail);
-          await this.props.addNewNotif(token, sendMail);
-          this.getDataCart();
-          this.openSubmit();
-          this.openReason();
-          this.setState({confirm: 'submit'});
-          this.openDraftEmail();
-          this.openConfirm();
+  submitFinal = async () => {
+    const {dataUser, token} = this.props.auth;
+    const { noIo, dataCart } = this.props.pengadaan;
+    const { draftEmail } = this.props.tempmail;
+    const { message, subject, alasan } = this.state;
+    const data = {
+        no: noIo,
+    };
+    const cc = draftEmail.cc;
+    const tempcc = [];
+    for (let i = 0; i < cc.length; i++) {
+        tempcc.push(cc[i].email);
+    }
+    const sendMail = {
+      draft: draftEmail,
+      nameTo: draftEmail.to.fullname,
+      to: draftEmail.to.email,
+      cc: tempcc.toString(),
+      message: message,
+      subject: subject,
+      no: noIo,
+      tipe: 'pengadaan',
+      menu: 'pengadaan asset',
+      proses: 'submit',
+      route: 'pengadaan',
+    };
+    const dataReason = {
+      alasan: alasan,
+    };
+    if (dataCart[0].kategori === 'return') {
+      await this.props.submitIoFinal(token, data);
+      await this.props.updateReason(token, noIo, dataReason);
+      await this.props.sendEmail(token, sendMail);
+      await this.props.addNewNotif(token, sendMail);
+      this.getDataCart();
+      this.openSubmit();
+      this.openReason();
+      this.setState({confirm: 'submit'});
+      this.openDraftEmail();
+      this.openConfirm();
+    } else {
+      await this.props.submitIoFinal(token, data);
+      await this.props.sendEmail(token, sendMail);
+      await this.props.addNewNotif(token, sendMail);
+      this.getDataCart();
+      this.openSubmit();
+      this.setState({confirm: 'submit'});
+      this.openDraftEmail();
+      this.openConfirm();
+    }
+  }
+
+    selectNoIo = async (e) => {
+        const { dataSearch } = this.props.pengadaan;
+        const idVal = e.val.value;
+        const data = dataSearch.find((item) => item.no_pengadaan === idVal);
+        if (data === undefined) {
+            console.log('undefined');
         } else {
-          await this.props.submitIoFinal(token, data);
-          await this.props.sendEmail(token, sendMail);
-          await this.props.addNewNotif(token, sendMail);
-          this.getDataCart();
-          this.openSubmit();
-          this.setState({confirm: 'submit'});
-          this.openDraftEmail();
-          this.openConfirm();
+            this.setState({noAjuan: data.no_pengadaan});
         }
+    }
+
+    inputNoIo = (val) => {
+        console.log(val);
+        const { noAjuan } = this.state;
+        // this.setState({noAjuan: noAjuan.length > 3 && val === '' ? noAjuan : val })
+        if (val !== undefined && val.length > 10) {
+            this.getDataIo(val);
+        } else {
+            this.setState({ showOptions: false });
+            console.log('please press enter {} {}');
+        }
+    }
+
+    getDataIo = async (val) => {
+      const {dataUser, token} = this.props.auth;
+      const search = val;
+      await this.props.searchIo(token, '8', 'all', 'all', search, 100);
+      const {dataSearch, searchTemp} = this.props.pengadaan;
+      const {kategori} = this.state;
+      if (dataSearch.length > 0) {
+          const listNoIo = [
+              {value: '', label: '-Pilih-'},
+          ];
+
+          const listTemp = [
+              {value: '', label: '-Pilih-'},
+          ];
+
+          for (let i = 0; i < dataSearch.length; i++) {
+              listNoIo.push({value: dataSearch[i].no_pengadaan, label: dataSearch[i].no_pengadaan});
+              const data = `${dataSearch[i].id}-${dataSearch[i].nama}`;
+              if (kategori !== 'return') {
+                  const cek = listTemp.find(x => x.value === data);
+                  if (!cek) {
+                      listTemp.push({
+                        value: data,
+                        label: data,
+                        qty: dataSearch[i].qty,
+                        price: dataSearch[i].price,
+                      });
+                  }
+              }
+          }
+
+          if (kategori === 'return') {
+              for (let i = 0; i < searchTemp.length; i++) {
+                  const data = `${searchTemp[i].no_asset}-${searchTemp[i].nama}`;
+                  const cek = listTemp.find(x => x.value === data);
+                  if (!cek && !searchTemp[i].is_return) {
+                      listTemp.push({
+                        value: data,
+                        label: data,
+                        qty: searchTemp[i].qty,
+                        price: searchTemp[i].price,
+                      });
+                  }
+              }
+          }
+
+          this.setState({listNoIo: listNoIo, showOptions: true, listTemp: listTemp, showTemp: true });
+      } else {
+          this.setState({listNoIo: [], showOptions: true, listTemp: [], showTemp: true});
+      }
+    }
+
+    openArea = () => {
+      this.setState({openArea: !this.state.openArea});
+    }
+
+     onTypeArea = (val) => {
+      this.setState({ searchArea: val });
+    }
+
+    onSearchArea = async () => {
+      const { searchArea, dataArea } = this.state;
+      const { dataDepo } = this.props.depo;
+      const {dataUser, token} = this.props.auth;
+      const kode = dataUser.kode_plant;
+      const cekFilter = dataDepo.filter(x =>
+        (x.nama_area.toLowerCase().includes(searchArea.toLowerCase())) ||
+        (x.kode_plant.toLowerCase().includes(searchArea.toLowerCase())) ||
+        (x.kode_dist && x.kode_dist.toLowerCase().includes(searchArea.toLowerCase())) ||
+        (x.cost_center.toLowerCase().includes(searchArea.toLowerCase()))
+      );
+      this.setState({dataArea: searchArea === '' ? dataDepo : cekFilter});
     }
 
   render() {
-    const {nama, qty, price, kategori, tipe, jenis, akta, start, end, filter, newIo, openDetail, loading, realApp, detailData} = this.state;
+    const {nama, qty, price, kategori, tipe, jenis, is_suplement, cost_center, filter, dataItem, loading, realApp, detailData, nik, dataArea} = this.state;
 
     const loadingDepo = this.props.depo.isLoading;
     const loadingPengadaan = this.props.pengadaan.isLoading;
@@ -508,9 +889,10 @@ class CartPengadaan extends Component {
     const loadingDokumen = this.props.dokumen.isLoading;
     const loadingAll = loadingDepo || loadingPengadaan || loadingTempmail || loadingNewnotif || loadingDokumen || loading;
 
-    const { dataIo, noIo, dataDoc, detailIo, statusList, dataCart, dataDocCart} = this.props.pengadaan;
+    const { dataIo, noIo, dataDoc, detailIo, statusList, dataCart, dataDocCart, dataDetail} = this.props.pengadaan;
     const {dataAsset} = this.props.asset;
     const { dataDepo } = this.props.depo;
+    const listType = ['single', 'multiple'];
 
     const titleApprovals = [
       {
@@ -837,15 +1219,6 @@ class CartPengadaan extends Component {
             {/* Header */}
             <Text style={styles.headerTextDetail}>{this.state.typeModal === 'add' ? 'Add' : 'Update'} Item</Text>
 
-            {/* Image */}
-            {/* <View style={styles.imageWrapperDetail}>
-              <Image
-                source={placeholder}
-                style={styles.imageDetail}
-              />
-            </View> */}
-
-            {/* Form */}
             <View style={styles.formGroupDetail}>
               <Text style={styles.labelDetail}>Deskripsi :</Text>
               <TextInput style={styles.inputDetail} value={nama} onChangeText={(val) => this.setState({nama: val})} />
@@ -902,6 +1275,7 @@ class CartPengadaan extends Component {
                 }}
                 keyboardType="numeric"
                 value={this.state.displayPrice}
+                editable={kategori === 'return' ? false : true}
                 onChangeText={this.handlePrice}
               />
               {isNaN(parseInt(price)) && (
@@ -915,6 +1289,7 @@ class CartPengadaan extends Component {
                 keyboardType="numeric"
                 style={styles.inputDetail}
                 value={qty}
+                editable={kategori === 'return' || is_suplement ? false : true}
                 onChangeText={(val) => this.setState({qty: val})}
               />
               {isNaN(parseInt(qty)) && (
@@ -933,7 +1308,9 @@ class CartPengadaan extends Component {
                   <Picker.Item label="Select..." value="" />
                   <Picker.Item value={'budget'} label={'Budget'} />
                   <Picker.Item value={'non-budget'} label={'Non Budget'} />
-                  <Picker.Item value={'return'} label={'Return'} />
+                  {!is_suplement && (
+                    <Picker.Item value={'return'} label={'Return'} />
+                  )}
                 </Picker>
               </View>
               {kategori === '' && (
@@ -941,30 +1318,155 @@ class CartPengadaan extends Component {
               )}
             </View>
 
-            {kategori === 'return' && (
+            {kategori !== 'return' && (
               <View style={styles.formGroupDetail}>
+                <Text style={styles.labelDetail}>IO Suplement :</Text>
+                <View style={styles.pickerWrapperDetail}>
+                  <Picker
+                    selectedValue={is_suplement}
+                    style={styles.pickerDetail}
+                    onValueChange={(itemValue) => this.setState({is_suplement: itemValue})}
+                  >
+                    {/* <Picker.Item label="Select..." value="" /> */}
+                    <Picker.Item value={true} label={'Ya'} />
+                    <Picker.Item value={false} label={'Tidak'} />
+                  </Picker>
+                </View>
+                {is_suplement === '' && (
+                  <Text style={styles.errorTextDetail}>Must be filled</Text>
+                )}
+              </View>
+            )}
+
+            {(kategori === 'return' || is_suplement)  && (
+              <View style={styles.formGroupDetail}>
+                <Text style={styles.labelDetail}>No Reference :</Text>
                 <DropDownPicker
-                  multiple={true} // multi select
+                  // multiple={true} // multi select
                   min={0}
                   max={5} // batas maksimal (opsional)
                   searchable={true} // enable search
                   placeholder="Select..."
                   open={this.state.open}
-                  value={this.state.value}
-                  items={this.state.items}
+                  value={this.state.noAjuan}
+                  items={this.state.listNoIo}
+                  onChangeSearchText={val => this.inputNoIo(val)}
                   setOpen={(open) => this.setState({ open })}
                   setValue={(callback) =>
                     this.setState((state) => ({
-                      value: callback(state.value),
+                      noAjuan: callback(state.noAjuan),
                     }))
                   }
                   setItems={(callback) =>
                     this.setState((state) => ({
-                      items: callback(state.items),
+                      listNoIo: callback(state.listNoIo),
                     }))
                   }
                 />
               </View>
+            )}
+
+            {this.state.noAjuan !== '' && (
+              <View style={styles.formGroupDetail}>
+                <Text style={styles.labelDetail}>Asset Reference :</Text>
+                <DropDownPicker
+                  open={this.state.openAssetRef}
+                  value={this.state.asset_ref}
+                  items={this.state.listTemp}
+                  searchable={true}
+                  placeholder="Select..."
+
+                  setOpen={(openAssetRef) => this.setState({ openAssetRef })}
+
+                  setValue={(callback) => {
+                    const value =
+                      typeof callback === 'function'
+                        ? callback(this.state.asset_ref)
+                        : callback;
+
+                    const item = this.state.listTemp.find(i => i.value === value);
+
+                    if (!item) { return; }
+
+                    console.log(item.price);
+                    this.setState({
+                      asset_ref: item.value,
+                      qty: String(item.qty),
+                      price: item.price, // angka polosan
+                      displayPrice: item.price ? `Rp ${this.formatCurrency(item.price)}` : '',
+                    });
+                  }}
+
+                  setItems={(items) => this.setState({ listTemp: items })}
+                />
+              </View>
+            )}
+
+            {(this.state.typeModal !== 'add' && kategori !== 'return' && !is_suplement && level !== 5) && (
+              <>
+                <View style={styles.headerContainerModal}>
+                  <Text style={styles.headerTitleModal}>Detail Cost Center</Text>
+                </View>
+
+                <View style={{ paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#fbe9e7', borderRadius: 8, marginBottom: 10 }}>
+                  <Text style={{ fontSize: 13, color: '#e53935', fontWeight: 'bold' }}>
+                    Sisa qty: {parseInt(qty) - (dataItem.reduce((sum, i) => sum + parseInt(i.qty || 0), 0))} dari {qty}
+                  </Text>
+                </View>
+
+                {/* Card list */}
+                {dataItem.map((item, index) => (
+                  <View key={index} style={styles.ccCard}>
+
+                    {/* Card Header */}
+                    <View style={styles.ccCardHeader}>
+                      <View style={styles.ccBadgeNo}>
+                        <Text style={styles.ccBadgeNoText}>#{index + 1}</Text>
+                      </View>
+                      <Text style={styles.ccCardTitle} numberOfLines={1}>
+                        {item.cost_center || '—'}
+                      </Text>
+                      <View style={{ flexDirection: 'row' }}>
+                        <TouchableOpacity
+                          style={[styles.ccBtn, { borderColor: '#2196F3', marginRight: 6 }]}
+                          onPress={() => this.prosesOpenDetailItem(item, index)}
+                        >
+                          <Text style={[styles.ccBtnText, { color: '#2196F3' }]}>Edit</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.ccBtn, { borderColor: '#e53935' }]}
+                          onPress={() => this.deleteDetail(item)}
+                        >
+                          <Text style={[styles.ccBtnText, { color: '#e53935' }]}>Delete</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    {/* Card Body - NIK & Qty */}
+                    <View style={styles.ccCardBody}>
+                      {this.state.typeCost === 'single' && (
+                        <View style={styles.ccInfoBox}>
+                          <Text style={styles.ccInfoLabel}>NIK (opsional)</Text>
+                          <Text style={styles.ccInfoValue}>{item.nik || '—'}</Text>
+                        </View>
+                      )}
+                      <View style={styles.ccInfoBox}>
+                        <Text style={styles.ccInfoLabel}>Qty</Text>
+                        <Text style={styles.ccInfoValue}>{item.qty || '0'}</Text>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+
+                {(parseInt(qty) - (dataItem.reduce((sum, item) => sum + parseInt(item.qty || 0), 0))) !== 0 && (
+                  <TouchableOpacity
+                    style={styles.ccAddBtn}
+                    onPress={() => this.openModalDetail('add')}
+                  >
+                    <Text style={styles.ccAddBtnText}>+ Tambah Cost Center</Text>
+                  </TouchableOpacity>
+                )}
+              </>
             )}
 
             {/* Buttons */}
@@ -972,10 +1474,13 @@ class CartPengadaan extends Component {
               <TouchableOpacity
                 style={[
                   styles.addButtonDetail,
-                  (nama === '' || tipe === '' || jenis === '' || isNaN(parseInt(price)) || isNaN(parseInt(qty)) || kategori === '') && { backgroundColor: '#9CA3AF' },
+                  (nama === '' || tipe === '' || jenis === '' || isNaN(parseInt(price)) || isNaN(parseInt(qty)) || kategori === '' || is_suplement === '' || (kategori === 'return' && this.state.asset_ref === '') || (is_suplement && this.state.asset_ref === '')) && { backgroundColor: '#9CA3AF' },
                 ]}
-                disabled={(nama === '' || tipe === '' || jenis === '' || isNaN(parseInt(price)) || isNaN(parseInt(qty)) || kategori === '')}
-                onPress={this.state.typeModal === 'add' ? this.prosesAddPengadaan : () => this.prosesUpdatePengadaan()}
+                disabled={(nama === '' || tipe === '' || jenis === '' || isNaN(parseInt(price)) || isNaN(parseInt(qty)) || kategori === '' || is_suplement === '' || (kategori === 'return' && this.state.asset_ref === '') || (is_suplement && this.state.asset_ref === ''))}
+                onPress={
+                  this.state.typeModal === 'add'
+                  ? ((kategori === 'return' || is_suplement || level === 5) ? this.prosesAddPengadaan : this.openType)
+                  : () => this.prosesUpdatePengadaan()}
               >
                 <Text style={styles.addButtonTextDetail}>{this.state.typeModal === 'add' ? 'Add' : 'Save'}</Text>
               </TouchableOpacity>
@@ -1049,6 +1554,33 @@ class CartPengadaan extends Component {
                     <IconMateri name="close" color={'red'} size={50}/>
                     <Text style={styles.sectionTitleInfo}>Gagal Submit</Text>
                     <Text style={[styles.sectioSubtitleInfo]}>Mohon upload dokumen terlebih dahulu</Text>
+                    <TouchableOpacity style={styles.btnInfo} onPress={this.openConfirm}>
+                      <Text style={styles.textBtnInfo}>OK</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (this.state.confirm === 'falseAddDetail') ? (
+                  <View style={styles.sectionInfo}>
+                    <IconMateri name="close" color={'red'} size={50}/>
+                    <Text style={styles.sectionTitleInfo}>Gagal Menambahkan Detail</Text>
+                    <Text style={[styles.sectioSubtitleInfo]}>Pastikan cost center, dan qty diisi</Text>
+                    <TouchableOpacity style={styles.btnInfo} onPress={this.openConfirm}>
+                      <Text style={styles.textBtnInfo}>OK</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (this.state.confirm === 'falseQty') ? (
+                  <View style={styles.sectionInfo}>
+                    <IconMateri name="close" color={'red'} size={50}/>
+                    <Text style={styles.sectionTitleInfo}>Gagal</Text>
+                    <Text style={[styles.sectioSubtitleInfo]}>Pastikan quantity match</Text>
+                    <TouchableOpacity style={styles.btnInfo} onPress={this.openConfirm}>
+                      <Text style={styles.textBtnInfo}>OK</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (this.state.confirm === 'falseCost') ? (
+                  <View style={styles.sectionInfo}>
+                    <IconMateri name="close" color={'red'} size={50}/>
+                    <Text style={styles.sectionTitleInfo}>Gagal Menambahkan Detail</Text>
+                    <Text style={[styles.sectioSubtitleInfo]}>Cost center telah terdaftar</Text>
                     <TouchableOpacity style={styles.btnInfo} onPress={this.openConfirm}>
                       <Text style={styles.textBtnInfo}>OK</Text>
                     </TouchableOpacity>
@@ -1244,6 +1776,271 @@ class CartPengadaan extends Component {
               }}
               handleClose={this.openDokumen} />
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        style={{ margin: 0 }}
+        isVisible={this.state.modalType}
+        animationIn="slideInUp"
+        animationOut="slideOutDown"
+        onBackdropPress={this.openType}
+        useNativeDriver={true}
+      >
+        <View style={styles.overlayModal}>
+          <View style={styles.popupContainerModalList}>
+
+            {/* Header */}
+            <View style={styles.headerContainerModal}>
+              <Text style={styles.headerTitleModal}>Tipe Pengadaan Asset</Text>
+            </View>
+
+            <View style={styles.rowCardSpecial}>
+              {listType !== undefined && listType.length > 0 && listType.map((item, index) => {
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.cardSpecial}
+                    onPress={() => this.prosesOpenCost(item)}
+                  >
+                    {item === 'single' ? (
+                      <IconMateri name="person" size={80} />
+                    ) : (
+                      <IconMateri name="group" size={80} />
+                    )}
+                    <View style={{ backgroundColor: '#F9FAFB', borderRadius: 10, padding: 6, width: '100%' }}>
+                      <Text style={{ fontSize: 10, fontWeight: 'bold', textAlign: 'center' }} numberOfLines={2}>
+                        {item}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Footer */}
+            <View style={styles.footerModal}>
+              <TouchableOpacity
+                style={[styles.buttonModal, styles.btnColorSec]}
+                onPress={() => this.openType()}
+              >
+                <Text style={styles.buttonTextModal}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        style={{ margin: 0 }}
+        isVisible={this.state.modalCost}
+        animationIn="slideInUp"
+        animationOut="slideOutDown"
+        onBackdropPress={this.openCost}
+        useNativeDriver={true}
+      >
+        <View style={styles.overlayModal}>
+          <View style={styles.popupContainerModalList}>
+
+            {/* Header */}
+            <View style={styles.headerContainerModal}>
+              <Text style={styles.headerTitleModal}>Detail Cost Center</Text>
+            </View>
+
+            <View style={{ paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#fbe9e7', borderRadius: 8, marginBottom: 10 }}>
+              <Text style={{ fontSize: 13, color: '#e53935', fontWeight: 'bold' }}>
+                Sisa qty: {parseInt(qty) - (dataItem.reduce((sum, i) => sum + parseInt(i.qty || 0), 0))} dari {qty}
+              </Text>
+            </View>
+
+            {/* Card list */}
+            {dataItem.map((item, index) => (
+              <View key={index} style={styles.ccCard}>
+
+                {/* Card Header */}
+                <View style={styles.ccCardHeader}>
+                  <View style={styles.ccBadgeNo}>
+                    <Text style={styles.ccBadgeNoText}>#{index + 1}</Text>
+                  </View>
+                  <Text style={styles.ccCardTitle} numberOfLines={1}>
+                    {item.cost_center || '—'}
+                  </Text>
+                  <View style={{ flexDirection: 'row' }}>
+                    <TouchableOpacity
+                      style={[styles.ccBtn, { borderColor: '#2196F3', marginRight: 6 }]}
+                      onPress={() => this.prosesOpenDetailItem(item, index)}
+                    >
+                      <Text style={[styles.ccBtnText, { color: '#2196F3' }]}>Edit</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.ccBtn, { borderColor: '#e53935' }]}
+                      onPress={() => this.deleteDetail(item)}
+                    >
+                      <Text style={[styles.ccBtnText, { color: '#e53935' }]}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Card Body - NIK & Qty */}
+                <View style={styles.ccCardBody}>
+                  {this.state.typeCost === 'single' && (
+                    <View style={styles.ccInfoBox}>
+                      <Text style={styles.ccInfoLabel}>NIK (opsional)</Text>
+                      <Text style={styles.ccInfoValue}>{item.nik || '—'}</Text>
+                    </View>
+                  )}
+                  <View style={styles.ccInfoBox}>
+                    <Text style={styles.ccInfoLabel}>Qty</Text>
+                    <Text style={styles.ccInfoValue}>{item.qty || '0'}</Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+
+            {(parseInt(qty) - (dataItem.reduce((sum, item) => sum + parseInt(item.qty || 0), 0))) !== 0 && (
+              <TouchableOpacity
+                style={styles.ccAddBtn}
+                onPress={() => this.openModalDetail('add')}
+              >
+                <Text style={styles.ccAddBtnText}>+ Tambah Cost Center</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Footer */}
+            <View style={styles.footerModal}>
+              <TouchableOpacity
+                style={[styles.buttonModal, styles.btnColorProses]}
+                onPress={() => this.saveAdd()}
+                disabled={(parseInt(qty) - (dataItem.reduce((sum, item) => sum + parseInt(item.qty || 0), 0))) !== 0}
+              >
+                <Text style={styles.buttonTextModal}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.buttonModal, styles.btnColorSec]}
+                onPress={() => this.openCost()}
+              >
+                <Text style={styles.buttonTextModal}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        isVisible={this.state.modalDetailItem}
+        onBackdropPress={() => this.openModalDetail('close')}
+        style={styles.modalWrapperDetail}
+      >
+        <View style={styles.modalContainerDetail}>
+          <ScrollView>
+            {/* Header */}
+            <Text style={styles.headerTextDetail}>{this.state.typeModalDetail === 'add' ? 'Add' : 'Update'} Detail Item</Text>
+
+            <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>Cost Center :</Text>
+              <TouchableOpacity style={styles.inputDetail} onPress={this.openArea}>
+                <Text>{this.state.cost_center === '' ? 'Select...' : this.state.cost_center}</Text>
+              </TouchableOpacity>
+              {this.state.cost_center === '' && (
+                <Text style={styles.errorTextDetail}>Must be filled</Text>
+              )}
+            </View>
+
+            {this.state.typeCost === 'single' && (
+              <View style={styles.formGroupDetail}>
+                <Text style={styles.labelDetail}>NIK (Opsional) :</Text>
+                <TextInput style={styles.inputDetail} value={nik} onChangeText={(val) => this.setState({nik: val})} />
+              </View>
+            )}
+
+            <View style={styles.formGroupDetail}>
+              <Text style={styles.labelDetail}>Qty :</Text>
+              <TextInput
+                keyboardType="numeric"
+                style={styles.inputDetail}
+                value={this.state.typeCost === 'single' ? qty : this.state.qty_detail}
+                editable={this.state.typeCost === 'single' ? false : true}
+                onChangeText={(val) => this.setState({qty_detail: val})}
+              />
+              {isNaN(parseInt(this.state.typeCost === 'single' ? qty : this.state.qty_detail)) && (
+                <Text style={styles.errorTextDetail}>Must be filled with number</Text>
+              )}
+            </View>
+
+            {/* Buttons */}
+            <View style={styles.buttonWrapperDetail}>
+              <TouchableOpacity
+                style={[
+                  styles.addButtonDetail,
+                  (cost_center === '' || isNaN(parseInt(qty))) && { backgroundColor: '#9CA3AF' },
+                ]}
+                disabled={(cost_center === '' || isNaN(parseInt(qty)))}
+                onPress={
+                  this.state.typeModalDetail === 'add'
+                  ? () => this.addItem()
+                  : () => this.updateItem('save')}
+              >
+                <Text style={styles.addButtonTextDetail}>{this.state.typeModalDetail === 'add' ? 'Add' : 'Save'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.closeButtonDetail} onPress={() => this.openModalDetail('close')}>
+                <Text style={styles.closeButtonTextDetail}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
+      <Modal
+        style={{ margin: 0 }}
+        isVisible={this.state.openArea}
+        animationIn="slideInUp"
+        animationOut="slideOutDown"
+        onBackdropPress={this.openArea}
+        useNativeDriver={true}
+      >
+        <View style={styles.overlayModal}>
+          <View style={styles.popupContainerModalList}>
+
+            {/* Header */}
+            <View style={styles.headerContainerModal}>
+              <Text style={styles.headerTitleModal}>List Area</Text>
+            </View>
+
+            {/* Search */}
+            <View style={styles.searchContainer}>
+              <Ionicons
+                onPress={() => this.onSearchArea({ target: { value: this.state.searchArea }, key: 'Enter' })}
+                name="search"
+                size={20}
+                color="#999"
+              />
+              <TextInput
+                placeholder="Cari kode dist / plant / cost center..."
+                placeholderTextColor="#999"
+                style={styles.searchInput}
+                onChangeText={this.onTypeArea}
+                onSubmitEditing={() => this.onSearchArea()}
+                value={this.state.searchArea}
+              />
+              <Ionicons name="options-outline" size={20} color="#999" />
+            </View>
+
+            {/* FlatList langsung */}
+            <FlatList
+              data={this.state.dataArea}
+              renderItem={this.renderArea}
+              keyExtractor={(item) => item.id.toString()}
+              numColumns={1}
+              contentContainerStyle={{ padding: 5 }}
+              showsVerticalScrollIndicator={false}
+            />
+
+            {/* Footer */}
+            <View style={styles.footerModal}>
+              <TouchableOpacity
+                style={[styles.buttonModal, styles.btnColorClose]}
+                onPress={() => this.openArea()}
+              >
+                <Text style={styles.buttonTextModal}>Close</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -1933,6 +2730,119 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     marginTop: 5,
   },
+
+  rowCardSpecial: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+  },
+  cardSpecial: {
+    width: '47%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 10,
+    alignItems: 'center',
+    elevation: 3,
+    marginBottom: 10,
+  },
+
+  // Cost Center Card
+  ccCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginBottom: 10,
+    borderWidth: 0.5,
+    borderColor: '#e0e0e0',
+    overflow: 'hidden',
+  },
+  ccCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#f0f0f0',
+    marginRight: 8,
+  },
+  ccBadgeNo: {
+    backgroundColor: '#e3f2fd',
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  ccBadgeNoText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#1565C0',
+  },
+  ccCardTitle: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#111',
+  },
+  ccBtn: {
+    borderWidth: 0.5,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  ccBtnText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  ccCardBody: {
+    flexDirection: 'row',
+    padding: 10,
+    marginRight: 8,
+  },
+  ccInfoBox: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  ccInfoLabel: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginBottom: 2,
+  },
+  ccInfoValue: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  ccAddBtn: {
+    borderWidth: 0.5,
+    borderColor: '#2196F3',
+    borderStyle: 'dashed',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  ccAddBtnText: {
+    fontSize: 13,
+    color: '#2196F3',
+    fontWeight: '500',
+  },
+
+  // Area
+  areaCard: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 10,
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    marginBottom: 10,
+  },
 });
 
 const mapStateToProps = state => ({
@@ -1964,6 +2874,15 @@ const mapDispatchToProps = {
   sendEmail: tempmail.sendEmail,
   addNewNotif: newnotif.addNewNotif,
   submitIoFinal: pengadaan.submitIoFinal,
+  updateReason: pengadaan.updateReason,
+  addDetailItem: pengadaan.addDetailItem,
+  updateDetailItem: pengadaan.updateDetailItem,
+  deleteDetailItem: pengadaan.deleteDetailItem,
+  getDetailItem: pengadaan.getDetailItem,
+  getRole: user.getRole,
+  makeApproval: pengadaan.makeApproval,
+  deleteApproval: pengadaan.deleteApproval,
+  saveApproval: pengadaan.saveApproval,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(CartPengadaan);

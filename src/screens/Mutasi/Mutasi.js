@@ -156,7 +156,7 @@ class Mutasi extends Component {
       this.changeFilter(filter);
   }
 
-  changeFilter = async (val) => {
+  changeFilterOld = async (val) => {
       const {dataUser, token} = this.props.auth;
       const level = dataUser.user_level;
       const kode = dataUser.kode_plant;
@@ -274,6 +274,142 @@ class Mutasi extends Component {
           }
           this.setState({ filter: val, newMut: newMut });
       }
+  }
+
+  changeFilter = async (val) => {
+    const {dataUser, token} = this.props.auth;
+    const level = dataUser.user_level;
+    const kode = dataUser.kode_plant;
+    const { dataDepo } = this.props.depo;
+    const { detailUser, dataRole } = this.props.user;
+    const { time1, time2, search, limit } = this.state;
+    const cekTime1 = time1 === '' ? 'undefined' : moment(time1).format('YYYY-MM-DD');
+    const cekTime2 = time2 === '' ? 'undefined' : moment(time2).format('YYYY-MM-DD');
+    const status = val === 'finish' ? '8' : 'all';
+    console.log(search);
+    await this.props.getMutasi(token, status, cekTime1, cekTime2, search, 100);
+
+    const { dataMut, noMut } = this.props.mutasi;
+    const role = dataUser.role;
+    const arrRole = detailUser.detail_role;
+    const listRole = [];
+    for (let i = 0; i < arrRole.length + 1; i++) {
+        if (detailUser.user_level === 1) {
+            const data = {fullname: 'admin', name: 'admin', nomor: '1', type: 'all'};
+            listRole.push(data);
+        } else if (i === arrRole.length) {
+            const cek = dataRole.find(item => parseInt(item.nomor) === detailUser.user_level);
+            if (cek !== undefined) {
+                listRole.push(cek);
+            }
+        } else {
+            const cek = dataRole.find(item => parseInt(item.nomor) === arrRole[i].id_role);
+            if (cek !== undefined) {
+                listRole.push(cek);
+            }
+        }
+    }
+    console.log(dataMut);
+    if (val === 'available') {
+        const newMut = [];
+        const arrApp = [];
+        for (let i = 0; i < dataMut.length; i++) {
+            const depoFrm = dataDepo.find(item => item.kode_plant === dataMut[i].kode_plant);
+            const depoTo = dataDepo.find(item => item.kode_plant === dataMut[i].kode_plant_rec);
+            for (let x = 0; x < listRole.length; x++) {
+                console.log(listRole);
+                const app = dataMut[i].appForm === undefined ? [] : dataMut[i].appForm;
+
+                // + null check sama seperti changeFilter
+                const cekFrm = listRole[x].type === 'area' && depoFrm !== undefined ?
+                    ((depoFrm.nama_bm && depoFrm.nama_bm.toLowerCase() === detailUser.fullname.toLowerCase()) ||
+                    (depoFrm.nama_om && depoFrm.nama_om.toLowerCase() === detailUser.fullname.toLowerCase()) ||
+                    (depoFrm.nama_aos && depoFrm.nama_aos.toLowerCase() === detailUser.fullname.toLowerCase()) ?
+                        'pengirim' : 'not found') : 'all';
+
+                // + null check sama seperti changeFilter
+                const cekTo = listRole[x].type === 'area' && depoTo !== undefined ?
+                    ((depoTo.nama_bm && depoTo.nama_bm.toLowerCase() === detailUser.fullname.toLowerCase()) ||
+                    (depoTo.nama_om && depoTo.nama_om.toLowerCase() === detailUser.fullname.toLowerCase()) ||
+                    (depoTo.nama_aos && depoTo.nama_aos.toLowerCase() === detailUser.fullname.toLowerCase()) ?
+                        'penerima' : 'not found') : 'all';
+
+                const cekFin = cekFrm === 'pengirim' ? 'pengirim' : cekTo === 'penerima' ? 'penerima' : 'all';
+
+                // + kondisi level 5/9 untuk struktur sama seperti changeFilter
+                const cekApp = app.find(item =>
+                    (item.jabatan === listRole[x].name) &&
+                    (cekFin === 'all' ?
+                        (item.struktur === null || item.struktur === 'all') :
+                        (item.struktur === ((level === 5 || level === 9) ? 'penerima' : cekFin)))
+                );
+
+                const find = app.indexOf(cekApp);
+
+                if (level === 5 || level === 9) {
+                    console.log('at available 2');
+                    if (find === 0 || find === '0') {
+                        console.log('at available 3');
+                        if (dataMut[i].status_reject !== 1 && app[find] !== undefined && app[find + 1].status === 1 && app[find].status !== 1 && dataMut[i].kode_plant_rec === kode) {
+                            if (newMut.find(item => item.no_mutasi === dataMut[i].no_mutasi) === undefined) {
+                                newMut.push(dataMut[i]);
+                                arrApp.push({index: find, noMut: dataMut[i].no_mutasi});
+                            }
+                        }
+                    } else {
+                        console.log('at available 4');
+                        if (find !== app.length - 1) {
+                            if (dataMut[i].status_reject !== 1 && app[find] !== undefined && app[find + 1].status === 1 && app[find - 1].status === null && app[find].status !== 1 && dataMut[i].kode_plant_rec === kode) {
+                                if (newMut.find(item => item.no_mutasi === dataMut[i].no_mutasi) === undefined) {
+                                    newMut.push(dataMut[i]);
+                                    arrApp.push({index: find, noMut: dataMut[i].no_mutasi});
+                                }
+                            }
+                        }
+                    }
+                } else if (find === 0 || find === '0') {
+                    console.log('at available 8');
+                    if (dataMut[i].status_reject !== 1 && app[find] !== undefined && app[find + 1].status === 1 && app[find].status !== 1) {
+                        if (newMut.find(item => item.no_mutasi === dataMut[i].no_mutasi) === undefined) {
+                            newMut.push(dataMut[i]);
+                            arrApp.push({index: find, noMut: dataMut[i].no_mutasi});
+                        }
+                    }
+                } else {
+                    console.log('at available 5');
+                    if (dataMut[i].status_reject !== 1 && app[find] !== undefined && app[find + 1].status === 1 && app[find - 1].status === null && app[find].status !== 1) {
+                        if (newMut.find(item => item.no_mutasi === dataMut[i].no_mutasi) === undefined) {
+                            newMut.push(dataMut[i]);
+                            arrApp.push({index: find, noMut: dataMut[i].no_mutasi});
+                        }
+                    }
+                }
+            }
+        }
+        this.setState({ filter: val, newMut: newMut, arrApp: arrApp });
+    } else if (val === 'reject' && dataMut.length > 0) {
+        const newMut = [];
+        for (let i = 0; i < dataMut.length; i++) {
+            if (dataMut[i].status_reject === 1) {
+                newMut.push(dataMut[i]);
+            }
+        }
+        this.setState({ filter: val, newMut: newMut });
+    } else if (val === 'finish' && dataMut.length > 0) {
+        const newMut = [];
+        for (let i = 0; i < dataMut.length; i++) {
+            if (dataMut[i].status_form === 8) {
+                newMut.push(dataMut[i]);
+            }
+        }
+        this.setState({ filter: val, newMut: newMut });
+    } else {
+        const newMut = [];
+        for (let i = 0; i < dataMut.length; i++) {
+            newMut.push(dataMut[i]);
+        }
+        this.setState({ filter: val, newMut: newMut });
+    }
   }
 
   setDate = (event, selectedDate, type) => {
