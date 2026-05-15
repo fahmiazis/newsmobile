@@ -14,11 +14,12 @@ const persistConfig = {
 
 const persistedReducer = persistReducer(persistConfig, rootReducers);
 
-export default () => {
-  const store = createStore(
-    persistedReducer,
-    applyMiddleware(promiseMiddleware, logger),
-  );
-  const persistor = persistStore(store);
-  return {store, persistor};
-};
+const store = createStore(
+  persistedReducer,
+  applyMiddleware(promiseMiddleware, logger),
+);
+
+const persistor = persistStore(store);
+
+export { persistor };
+export default store;

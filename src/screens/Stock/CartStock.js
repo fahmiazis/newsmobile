@@ -36,6 +36,7 @@ import ModalDokumen from '../../components/ModalDokumen';
 import CustomPicker from '../../components/CustomPicker';
 
 import {API_URL} from '@env';
+import AuthImage from '../../helpers/AuthImage';
 
 const numColumns = 2;
 const screenWidth = Dimensions.get('window').width;
@@ -916,7 +917,7 @@ class CartStock extends Component {
 
   renderData = ({ item }) => (
     <View style={[styles.assetCard, { width: this.state.openList ? cardWidthList : cardWidth }]}>
-      <Image
+      <AuthImage
         source={
           item.pict === undefined || item.pict.length === 0 ?
           placeholder :
@@ -953,7 +954,7 @@ class CartStock extends Component {
 
   renderAdd = ({ item }) => (
     <View style={[styles.assetCard, { width: cardWidthList }]}>
-      <Image
+      <AuthImage
         source={
           !item.image ?
           placeholder :
@@ -1525,7 +1526,7 @@ class CartStock extends Component {
           />
         ) : (
           <View style={[styles.blankBody, styles.blankBg]}>
-            <Image source={blankImg} style={styles.blankImg} />
+            <AuthImage source={blankImg} style={styles.blankImg} />
           </View>
         )}
       </View>
@@ -1842,7 +1843,7 @@ class CartStock extends Component {
 
             {/* Image */}
             <View style={styles.imageWrapperDetail}>
-              <Image
+              <AuthImage
                 source={
                   detailData.pict === undefined || detailData.pict.length === 0 ?
                   placeholder :
@@ -2080,7 +2081,7 @@ class CartStock extends Component {
 
             {this.state.typeAdditional === 'edit' && (
               <View style={styles.imageWrapperDetail}>
-                <Image
+                <AuthImage
                   source={
                     detailData.image === undefined ?
                     placeholder :
@@ -2305,7 +2306,7 @@ class CartStock extends Component {
 
             {/* Image */}
             <View style={styles.imageWrapperDetail}>
-              <Image
+              <AuthImage
                 source={
                   detailData.img === undefined || detailData.img.length === 0 ?
                   placeholder :

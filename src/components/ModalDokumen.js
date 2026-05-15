@@ -147,6 +147,7 @@ class ModalDokumen extends Component {
 
   downloadAndZip = async () => {
     try {
+      const {dataUser, token} = this.props.auth;
       const { arrDoc } = this.props.parDoc;
       const { cekDoc } = this.state;
       const selectedDocs = arrDoc.filter((doc) => cekDoc.find(x => x === doc.id) !== undefined);
@@ -172,6 +173,9 @@ class ModalDokumen extends Component {
           await RNFS.downloadFile({
             fromUrl: `${API_URL}/show/doc/${doc.id}`,
             toFile: filePath,
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }).promise;
           return filePath;
         } catch (err) {
@@ -855,6 +859,9 @@ class ModalDokumen extends Component {
                       <Pdf
                         source={{
                           uri: `${API_URL}/show/doc/${doc.id}`,
+                          headers: {
+                          Authorization: `Bearer ${token}`,
+                        },
                         }}
                         style={{ flex: 1 }}
                         scale={1.0}

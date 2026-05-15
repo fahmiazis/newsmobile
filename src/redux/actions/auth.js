@@ -1,11 +1,19 @@
 /* eslint-disable prettier/prettier */
 import http from '../../helpers/http';
 import qs from 'qs';
+import { Platform } from 'react-native';
 
 export default {
+  // login: (data) => ({
+  //   type: 'AUTH_USER',
+  //   payload: http().post('/auth/login', qs.stringify(data)),
+  // }),
   login: (data) => ({
-    type: 'AUTH_USER',
-    payload: http().post('/auth/login', qs.stringify(data)),
+      type: 'AUTH_USER',
+      payload: http().post('/auth/login', qs.stringify({
+      ...data,
+      device_info: `${Platform.OS} ${Platform.Version}`,
+      })),
   }),
   choosePlant: (token, data) => ({
     type: 'CH_PLANT',

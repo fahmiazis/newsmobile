@@ -22,23 +22,26 @@ export default (state = authState, action) => {
         alertMsg: 'Login in ....',
       };
     }
+    // case 'AUTH_USER_FULFILLED': {
+    //   return {
+    //     ...state,
+    //     isLogin: true,
+    //     isError: false,
+    //     isLoading: false,
+    //     token: action.payload.data.Token,
+    //     dataUser: action.payload.data.user,
+    //     listUser: action.payload.data.user.dataUser,
+    //     alertMsg: 'Login Succesfully',
+    //   };
+    // }
     case 'AUTH_USER_FULFILLED': {
-      // localStorage.setItem('token', action.payload.data.Token)
-      // localStorage.setItem('level', action.payload.data.user.user_level)
-      // localStorage.setItem('name', action.payload.data.user.username)
-      // localStorage.setItem('fullname', action.payload.data.user.fullname)
-      // localStorage.setItem('email', action.payload.data.user.email)
-      // localStorage.setItem('kode', action.payload.data.user.kode_plant)
-      // localStorage.setItem('id', action.payload.data.user.id)
-      // localStorage.setItem('role', action.payload.data.user.role)
-      // localStorage.setItem('it', action.payload.data.user.status_it)
-      // localStorage.setItem('dataUser', action.payload.data.user.dataUser.length)
       return {
         ...state,
         isLogin: true,
         isError: false,
         isLoading: false,
-        token: action.payload.data.Token,
+        token: action.payload.data.access_token,
+        refresh_token: action.payload.data.refresh_token,
         dataUser: action.payload.data.user,
         listUser: action.payload.data.user.dataUser,
         alertMsg: 'Login Succesfully',
@@ -157,6 +160,27 @@ export default (state = authState, action) => {
           ...state,
           token: action.payload.token,
           isLogin: true,
+        };
+    }
+    case 'REFRESH_TOKEN_FULFILLED': {
+        const { access_token, refresh_token } = action.payload.data;
+        return { ...state,
+          token: access_token,
+          refresh_token: refresh_token,
+          isLogin: true,
+        };
+    }
+
+    case 'REFRESH_TOKEN_REJECTED': {
+        // refresh token expired → paksa logout
+        return {
+          ...state,
+          isRegister: false,
+          isLogin: false,
+          alertMsg: 'Logout success',
+          token: '',
+          dataUser: {},
+          chplant: '',
         };
     }
     case 'LOGOUT': {
