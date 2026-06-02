@@ -61,6 +61,7 @@ export default (state = authState, action) => {
         ...state,
         chplant: action.payload.chplant,
         token: action.payload.token,
+        refresh_token: action.payload.refresh_token,
         dataUser: action.payload.data,
       };
     }

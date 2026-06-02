@@ -138,6 +138,11 @@ class Sidebar extends Component {
               <Text style={styles.menuText}>Dashboard</Text>
             </TouchableOpacity>
 
+            <TouchableOpacity style={[styles.menuItem]} onPress={() => this.goRoute({menu: 'MyAsset', screen: 'MyAsset'})}>
+              <Icon name='table' size={18} color="#fff" />
+              <Text style={styles.menuText}>My Asset</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => this.toggleExpand('Pengadaan Aset')}

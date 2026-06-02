@@ -84,16 +84,15 @@ class Home extends Component {
     await this.props.getToken(token, val.id);
 
     const {dataToken} = this.props.auth;
-    console.log(dataToken);
-    console.log(val);
     const chPlant = (val.kode_plant === undefined || val.kode_plant === null || val.kode_plant === '') ? val.username : val.kode_plant;
-    await this.props.getAllNewNotif(dataToken.Token);
+    await this.props.getAllNewNotif(dataToken.access_token);
     const dataSelect = {
       data: {
         ...val,
         role: val.role.name,
       },
-      token: dataToken.Token,
+      token: dataToken.access_token,
+      refresh_token: dataToken.refresh_token,
       chplant: chPlant,
     };
     await this.props.setDataUser(dataSelect);
